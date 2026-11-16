@@ -8,5 +8,7 @@ pub async fn pool(url: &str) -> Result<PgPool, sqlx::Error> {
         .connect(url)
         .await
 }
+pub mod admin;
+pub mod auth;
 pub mod http;
 pub mod identity;

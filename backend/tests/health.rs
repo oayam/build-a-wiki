@@ -30,6 +30,7 @@ async fn readiness_checks_migrations_storage_and_database() {
     let app = router(AppState {
         pool: pool.clone(),
         attachment_dir: dir.clone(),
+        security: wiki_api::auth::Security::default(),
     });
     async fn check(app: axum::Router, expected: u16) {
         let r = app

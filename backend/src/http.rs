@@ -14,6 +14,7 @@ use utoipa::{OpenApi, ToSchema};
 pub struct AppState {
     pub pool: PgPool,
     pub attachment_dir: PathBuf,
+    pub security: crate::auth::Security,
 }
 #[derive(Debug)]
 pub struct Config {
@@ -61,7 +62,7 @@ pub struct ApiError {
 }
 #[derive(Clone)]
 pub struct RequestId(pub String);
-fn error(status: StatusCode, code: &str, message: &str, id: &RequestId) -> Response {
+pub(crate) fn error(status: StatusCode, code: &str, message: &str, id: &RequestId) -> Response {
     (
         status,
         Json(ApiError {
@@ -144,6 +145,19 @@ async fn request_context(mut req: Request, next: Next) -> Response {
     let start = Instant::now();
     let method = req.method().clone();
     let mut response = next.run(req).await;
+    if response.status().is_client_error()
+        && !response
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| v.starts_with("application/json"))
+    {
+        let status = response.status();
+        response = error(status, "VALIDATION_ERROR", "请求格式无效", &id);
+    }
+    response
+        .headers_mut()
+        .insert("cache-control", HeaderValue::from_static("no-store"));
     response.headers_mut().insert(
         "x-request-id",
         HeaderValue::from_str(&id.0).expect("UUID header"),
@@ -153,6 +167,8 @@ async fn request_context(mut req: Request, next: Next) -> Response {
 }
 pub fn router(state: AppState) -> Router {
     Router::new()
+        .merge(crate::auth::routes())
+        .merge(crate::admin::routes())
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
         .fallback(not_found)
@@ -161,7 +177,25 @@ pub fn router(state: AppState) -> Router {
         .with_state(state)
 }
 #[derive(OpenApi)]
-#[openapi(paths(live, ready), components(schemas(Health, ApiError)))]
+#[openapi(
+    paths(
+        live,
+        ready,
+        crate::auth::login,
+        crate::auth::me,
+        crate::auth::logout,
+        crate::admin::users,
+        crate::admin::create_user,
+        crate::admin::update_user,
+        crate::admin::reset_password,
+        crate::admin::groups,
+        crate::admin::create_group,
+        crate::admin::members,
+        crate::admin::add_member,
+        crate::admin::remove_member
+    ),
+    components(schemas(Health, ApiError))
+)]
 pub struct ApiDoc;
 #[cfg(test)]
 mod tests {
@@ -192,6 +226,7 @@ mod tests {
             let response = router(AppState {
                 pool: pool.clone(),
                 attachment_dir: "/nonexistent".into(),
+                security: crate::auth::Security::default(),
             })
             .oneshot(
                 Request::builder()

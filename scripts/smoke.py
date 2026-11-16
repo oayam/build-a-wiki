@@ -2,6 +2,7 @@
 import json,os,pathlib,signal,subprocess,time,urllib.request,urllib.error
 root=pathlib.Path(__file__).resolve().parent.parent
 env=os.environ.copy()
+env.setdefault('APP_BASE_URL','http://127.0.0.1:5173')
 port=env.get('SMOKE_PORT','18080')
 env['BIND_ADDR']='127.0.0.1:'+port
 env['ATTACHMENT_DIR']=str(root/'.data/smoke-attachments')

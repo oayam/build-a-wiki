@@ -15,6 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     axum::serve(
         listener,
         router(AppState {
+            security: wiki_api::auth::Security::from_env().map_err(std::io::Error::other)?,
             pool: pool.clone(),
             attachment_dir: config.attachment_dir,
         }),
