@@ -13,6 +13,9 @@ import { extensions, fixture, plainText } from "./editor";
 import { health } from "./api";
 import { zh } from "./locales/zh";
 import "./style.css";
+import { SessionGate, Account, useSession } from "./session";
+import Users from "./Users";
+import { Libraries, PermissionPanel } from "./Knowledge";
 function Status() {
   const q = useQuery({
     queryKey: ["health"],
@@ -42,26 +45,6 @@ function Status() {
       message={zh.ready}
       description={`状态：${q.data.status}`}
     />
-  );
-}
-function Home() {
-  return (
-    <>
-      <div className="eyebrow">知识从这里连接</div>
-      <h1>让团队经验，成为共同积累。</h1>
-      <p className="intro">整理文档、沉淀实践，让每一次探索都有迹可循。</p>
-      <Status />
-      <section className="empty">
-        <Empty
-          description={
-            <>
-              <h2>{zh.empty}</h2>
-              <p>{zh.emptyDetail}</p>
-            </>
-          }
-        />
-      </section>
-    </>
   );
 }
 function Prototype() {
@@ -111,6 +94,7 @@ function Prototype() {
   );
 }
 function App() {
+  const { user } = useSession();
   return (
     <div className="shell">
       <aside>
@@ -126,16 +110,35 @@ function App() {
           <NavLink to="/shared">{zh.shared}</NavLink>
           <NavLink to="/editor">{zh.editor}</NavLink>
           <NavLink to="/status">{zh.status}</NavLink>
+          {user.is_system_admin && (
+            <NavLink to="/admin/users">账号与用户组</NavLink>
+          )}
         </nav>
-        <footer>工程基线 · T0—T12</footer>
+        <footer>团队知识库</footer>
       </aside>
       <div className="content">
         <header>
-          知识管理 / 工作台<span>中文 · 本地部署</span>
+          知识管理 / 工作台
+          <Account />
         </header>
         <main>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Libraries />} />
+            <Route path="/knowledge-bases/:id" element={<PermissionPanel />} />
+            <Route
+              path="/pages/:id/permissions"
+              element={<PermissionPanel page />}
+            />
+            <Route
+              path="/admin/users"
+              element={
+                user.is_system_admin ? (
+                  <Users />
+                ) : (
+                  <Alert type="error" message="没有管理权限" />
+                )
+              }
+            />
             <Route
               path="/shared"
               element={
@@ -177,7 +180,9 @@ createRoot(document.getElementById("root")!).render(
     >
       <QueryClientProvider client={client}>
         <BrowserRouter>
-          <App />
+          <SessionGate>
+            <App />
+          </SessionGate>
         </BrowserRouter>
       </QueryClientProvider>
     </ConfigProvider>
