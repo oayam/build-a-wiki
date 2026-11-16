@@ -32,3 +32,5 @@ jobs:
           python3 scripts/smoke.py
         env:
           DATABASE_URL: postgres://wiki:wiki_dev@localhost:5432/wiki_test
+      - run: cd frontend && npx playwright install --with-deps chromium
+      - run: python3 scripts/e2e.py

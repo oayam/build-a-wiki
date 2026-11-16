@@ -233,6 +233,15 @@
       "peerDependencies": null
     },
     {
+      "name": "@playwright/test",
+      "version": "1.65.1",
+      "license": "Apache-2.0",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": null
+    },
+    {
       "name": "@rc-component/async-validator",
       "version": "5.1.2",
       "license": "MIT",
@@ -1218,6 +1227,24 @@
       "license": "MIT",
       "engines": {
         "node": ">=12"
+      },
+      "peerDependencies": null
+    },
+    {
+      "name": "playwright",
+      "version": "1.65.1",
+      "license": "Apache-2.0",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": null
+    },
+    {
+      "name": "playwright-core",
+      "version": "1.65.1",
+      "license": "Apache-2.0",
+      "engines": {
+        "node": ">=20"
       },
       "peerDependencies": null
     },

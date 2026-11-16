@@ -22,3 +22,9 @@ libssl-dev 3.0.2-0ubuntu1.30
 
 # T13新增
 argon2 0.5.3（密码哈希，锁文件已更新）
+
+# B组新增浏览器验收环境
+@playwright/test 1.65.1
+Chromium / Chrome Headless Shell 159.0.8154.6 (Playwright build 1255)
+FFmpeg (Playwright build 1013)
+Playwright官方 install-deps 安装的 Linux 浏览器共享库、中文字体及 xvfb

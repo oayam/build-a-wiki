@@ -11,3 +11,7 @@ dist/
 
 # Local agent configuration artifacts
 config.toml.merged
+
+# Browser test artifacts
+frontend/test-results/
+frontend/playwright-report/

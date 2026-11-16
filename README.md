@@ -1,6 +1,6 @@
 # Build-a-Wiki
 
-T0～T12 工程基线：React 中文应用壳、Tiptap 契约原型、Rust 健康接口、PostgreSQL 迁移和权限并发验证。账号、真实知识库、正文持久化属于 T13 以后；界面不会模拟已完成的业务数据。
+T0～T24：中文登录与账号/组管理、私有知识库、所有权转让、继承/独立ACL权限管理、审计与安全会话。正文编辑持久化、页面树、附件与搜索属于后续阶段；编辑器验证页仍是本地原型。
 
 ## 本机开发
 
@@ -17,6 +17,8 @@ set +a
 mkdir -p .data/attachments
 (cd frontend && npm ci)
 make migrate
+# 首次部署：从受限密码文件读取初始化管理员密码（仅成功一次）
+cargo run --manifest-path backend/Cargo.toml --bin bootstrap -- admin < /path/to/password-file
 # 终端1（从根目录启动，附件路径相对根目录）
 cargo run --manifest-path backend/Cargo.toml --bin wiki-api
 # 终端2
@@ -45,4 +47,6 @@ bash scripts/contracts.sh --write
 - docs/openapi.json：从 Rust 类型与路由注解生成的接口契约
 - docs/licenses.json：依赖版本与许可证元数据
 
-当前全局授权屏障原型位于 backend/tests，仅为风险验证，不提供无鉴权业务路由。生产权限服务在 T20 实现。
+正式权限函数和统一服务已接入知识库与ACL API；授权写操作使用全局屏障。原型回归测试仍保留。页面创建接口在T26实现，当前页面权限浏览器验收使用隔离数据库夹具。
+
+真实浏览器验收：安装 `cd frontend && npx playwright install --with-deps chromium` 后，先 `cargo build --manifest-path backend/Cargo.toml`，再从根目录运行 `TEST_DATABASE_URL=... python3 scripts/e2e.py`。脚本自行初始化随机schema/管理员密码并启动服务，成功后清理，失败保留schema和trace诊断。身份配置和权限规则见 docs/IDENTITY.md。
