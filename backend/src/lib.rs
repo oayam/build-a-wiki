@@ -12,3 +12,5 @@ pub mod admin;
 pub mod auth;
 pub mod http;
 pub mod identity;
+pub mod knowledge;
+pub mod permissions;

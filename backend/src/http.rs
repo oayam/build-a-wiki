@@ -169,6 +169,7 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(crate::auth::routes())
         .merge(crate::admin::routes())
+        .merge(crate::knowledge::routes())
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
         .fallback(not_found)
@@ -192,7 +193,18 @@ pub fn router(state: AppState) -> Router {
         crate::admin::create_group,
         crate::admin::members,
         crate::admin::add_member,
-        crate::admin::remove_member
+        crate::admin::remove_member,
+        crate::knowledge::list,
+        crate::knowledge::create,
+        crate::knowledge::detail,
+        crate::knowledge::rename,
+        crate::knowledge::transfer,
+        crate::knowledge::kb_permissions,
+        crate::knowledge::kb_update,
+        crate::knowledge::page_permissions,
+        crate::knowledge::page_update,
+        crate::knowledge::kb_subjects,
+        crate::knowledge::page_subjects,
     ),
     components(schemas(Health, ApiError))
 )]

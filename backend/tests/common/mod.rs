@@ -31,3 +31,47 @@ pub async fn cleanup(pool: PgPool, admin: PgPool, schema: String) {
         .unwrap();
     admin.close().await;
 }
+
+use axum::{
+    Router,
+    body::{Body, to_bytes},
+    http::Request,
+};
+use serde_json::Value;
+use tower::ServiceExt;
+#[allow(dead_code)]
+pub async fn request(
+    app: &Router,
+    method: &str,
+    path: &str,
+    body: Value,
+    cookie: &str,
+    csrf: &str,
+    origin: &str,
+) -> (u16, Value, String) {
+    let r = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(method)
+                .uri(path)
+                .header("content-type", "application/json")
+                .header("origin", origin)
+                .header("cookie", cookie)
+                .header("x-csrf-token", csrf)
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let code = r.status().as_u16();
+    let cookie = r
+        .headers()
+        .get("set-cookie")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_owned();
+    let bytes = to_bytes(r.into_body(), 1024 * 1024).await.unwrap();
+    let value = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+    (code, value, cookie)
+}
