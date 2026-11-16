@@ -2,7 +2,7 @@
 
 ## 首次初始化
 
-先执行迁移，再运行 `cargo run --manifest-path backend/Cargo.toml --bin bootstrap -- USERNAME < /path/to/password-file`。密码文件由操作员创建，限制为本人读取，用后删除；也可通过隐藏输入的终端管道传入。不要把密码作为命令行参数或写入仓库。密码至少12字符、最多256字节。
+先执行迁移，再运行 `cargo run --manifest-path backend/Cargo.toml --bin bootstrap -- USERNAME < /path/to/password-file`。密码文件由操作员创建，限制为本人读取，用后删除；也可通过隐藏输入的终端管道传入。不要把密码作为命令行参数或写入仓库。密码当前临时允许至少8字符、最多256字节。正式部署前恢复12字符下限，追踪项见 [SEC-001](TODO.md)。
 
 初始化仅限本机CLI，无HTTP入口、无固定密码。任何用户已经存在即永久关闭初始化；全局授权屏障保证并发最多一个成功。初始化与审计同事务提交。
 

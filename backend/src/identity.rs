@@ -2,9 +2,11 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_ha
 use sha2::{Digest, Sha256};
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
+// TODO(SEC-001): 正式部署前恢复12字符下限，并同步前端、测试和账号改密；见 docs/TODO.md。
+const MIN_PASSWORD_CHARS: usize = 8;
 pub fn hash_password(password: &str) -> Result<String, String> {
-    if password.chars().count() < 12 || password.len() > 256 {
-        return Err("密码必须为12～256字节，至少12个字符".into());
+    if password.chars().count() < MIN_PASSWORD_CHARS || password.len() > 256 {
+        return Err("密码至少8个字符，最多256字节（临时开发策略）".into());
     }
     let salt = SaltString::encode_b64(Uuid::new_v4().as_bytes()).map_err(|_| "密码处理失败")?;
     Argon2::default()
@@ -83,4 +85,17 @@ pub async fn bootstrap(
     .map_err(|_| "数据库错误")?;
     tx.commit().await.map_err(|_| "数据库错误")?;
     Ok(id)
+}
+
+#[cfg(test)]
+mod password_policy_tests {
+    use super::*;
+    #[test]
+    fn temporary_minimum_and_hash_verification() {
+        assert!(hash_password("1234567").is_err());
+        let hash = hash_password("test123.").unwrap();
+        assert!(verify_password("test123.", &hash));
+        assert!(!verify_password("wrong123", &hash));
+        assert!(hash_password(&"a".repeat(257)).is_err());
+    }
 }
