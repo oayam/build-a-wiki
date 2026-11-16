@@ -19,3 +19,6 @@ libssl-dev 3.0.2-0ubuntu1.30
 # 环境状态
 本机 PostgreSQL 14/main，开发库 wiki_dev，独立测试库 wiki_test。
 网络需沙箱外审批；系统包一次502重试后安装成功。未安装Docker；生产容器构建属于T49。
+
+# T13新增
+argon2 0.5.3（密码哈希，锁文件已更新）
