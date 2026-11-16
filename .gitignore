@@ -1,0 +1,13 @@
+.tools/
+.env
+.env.*
+!.env.example
+node_modules/
+target/
+dist/
+.data/
+*.log
+.temp*
+
+# Local agent configuration artifacts
+config.toml.merged

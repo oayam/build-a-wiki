@@ -1,0 +1,173 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  color: #253b36;
+  background: #f7f9f8;
+  font-family: system-ui, sans-serif;
+}
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+aside {
+  width: 244px;
+  background: #fff;
+  border-right: 1px solid #e3eae6;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.brand {
+  font-size: 20px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand span {
+  background: #287d68;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+.workspace {
+  font-size: 12px;
+  color: #87958f;
+  letter-spacing: 2px;
+  margin: 44px 12px 14px;
+}
+nav {
+  display: grid;
+  gap: 8px;
+}
+nav a {
+  padding: 13px 16px;
+  color: #53665f;
+  text-decoration: none;
+  border-radius: 8px;
+}
+nav a.active {
+  background: #eaf4ef;
+  color: #216b55;
+  font-weight: 650;
+}
+footer {
+  margin-top: auto;
+  padding-top: 40px;
+  font-size: 12px;
+  color: #83938b;
+}
+.content {
+  flex: 1;
+  min-width: 0;
+}
+header {
+  height: 76px;
+  border-bottom: 1px solid #e3eae6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  background: #fff;
+  color: #6e7d76;
+  font-size: 13px;
+}
+header span {
+  font-size: 12px;
+}
+main {
+  max-width: 1120px;
+  margin: auto;
+  padding: 54px 48px;
+}
+.eyebrow {
+  color: #287d68;
+  font-size: 13px;
+  font-weight: 600;
+}
+h1 {
+  font-size: 32px;
+  font-weight: 650;
+  letter-spacing: -1px;
+  margin: 16px 0;
+}
+h2 {
+  font-size: 18px;
+}
+.intro {
+  color: #75867c;
+  margin-bottom: 34px;
+}
+.empty {
+  margin-top: 28px;
+  border: 1px solid #e2eae5;
+  border-radius: 14px;
+  background: white;
+  padding: 70px 28px;
+}
+.empty p {
+  max-width: 440px;
+  margin: auto;
+  line-height: 1.9;
+  color: #7c8983;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0 12px;
+}
+.tiptap {
+  background: #fff;
+  min-height: 340px;
+  padding: 24px;
+  border: 1px solid #d7e2dc;
+  border-radius: 10px;
+  outline-color: #287d68;
+}
+.tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.tiptap td,
+.tiptap th {
+  border: 1px solid #bdccc3;
+  padding: 10px;
+}
+.tiptap pre,
+pre {
+  background: #edf2ef;
+  padding: 16px;
+  white-space: pre-wrap;
+  border-radius: 8px;
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #287d68;
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  aside {
+    width: 170px;
+    padding: 20px 10px;
+  }
+  .brand {
+    font-size: 14px;
+    gap: 5px;
+  }
+  main {
+    padding: 30px 18px;
+  }
+  header {
+    padding: 0 18px;
+  }
+  h1 {
+    font-size: 24px;
+  }
+  header span {
+    display: none;
+  }
+}

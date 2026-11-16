@@ -1,0 +1,23 @@
+# T0～T12 开发检查表
+
+原计划从 T01 开始；T0 是本次补充的启动检查。✔仅代表对应产物完成，不代表后续业务已经实现。
+
+| 任务 | 状态 | 备注 |
+| --- | --- | --- |
+| T0 启动检查 | ✔ | 已读取设计和任务计划，建立本表；记录已有及缺失环境到 dependency.txt。 |
+| T01 固定需求 | ✔ | DECISIONS.md 固定授权矩阵、所有权/停用、最后管理员、移动删除预览、版本恢复和排除项。 |
+| T02 验收样例 | ✔ | ACCEPTANCE.md 定义六类参与者、12条验收场景及结果，明确后续执行节点；未宣称业务测试已通过。 |
+| T03 领域及接口约定 | ✔ | DECISIONS.md 含 ER、物理 ACL、循环外键方案、草稿/访问模型、状态、统一锁顺序、错误码、分页及缺失接口。 |
+| T04 工具链许可证 | ✔ | 已安装 Rust 1.100.0/PostgreSQL 14.24/GCC 11，锁定 npm/Cargo 依赖；许可证清单 docs/licenses.json；前端 audit 0，兼容性见 TOOLCHAIN.md。 |
+| T05 工程初始化 | ✔ | 前后端实际构建通过；Cargo.lock/package-lock.json、格式/lint/Makefile、.env.example 和敏感文件忽略规则齐备。 |
+| T06 数据库迁移基础 | ✔ | PostgreSQL 14.24 已启动，wiki_dev/wiki_test 分离；SQLx 池及迁移命令落地，开发库连续迁移两次成功。 |
+| T07 自动校验基础 | ✔ | scripts/check.sh 与 GitHub Actions CI 已建立；完整命令通过：类型/格式/前端测试构建、Rust Clippy及测试、真实数据库集成与契约差异检查。 |
+| T08 编辑器契约验证 | ✔ | 7个前端测试通过，含真实 DOM Tiptap 挂载和中文/代码/表格 JSON 往返；禁用会改变正文的 trailingNode；白名单及文本样例见 BODY_SCHEMA.md。 |
+| T09 权限并发验证 | ✔ | PostgreSQL 最小 ACL 矩阵及双事务测试通过；观测实际 Lock 等待，验证撤权先行拒绝写入及已有写入先提交；无临时业务接口。 |
+| T10 后端公共基础 | ✔ | 配置/标准错误/request_id/JSON日志/live/ready/优雅退出已实现；迁移缺失、目录缺失、数据库关闭测试及真实HTTP/SIGTERM冒烟通过。 |
+| T11 OpenAPI 生成链 | ✔ | Rust utoipa 生成 docs/openapi.json，openapi-typescript 生成客户端类型；scripts/contracts.sh 零差异验证通过并纳入CI。 |
+| T12 前端应用壳 | ✔ | 中文导航与应用壳、健康请求、加载/错误重试/空状态、可操作编辑器已实现；类型/生产构建和真实Vite→后端健康接口连通验证通过。 |
+
+## 执行记录
+
+全部任务已完成并记录校验小结。复现命令和结果详见 VALIDATION.md，新增环境见 ../dependency.txt。PostgreSQL 保持运行；测试HTTP进程均已退出。开发完成时目录尚未初始化 Git；现已按用户要求初始化 main 分支，纳入首次提交（提交信息 mayao）。

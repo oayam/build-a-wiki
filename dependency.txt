@@ -1,0 +1,21 @@
+# 本轮环境补全：2026-11-16，Ubuntu 22.04.5 LTS amd64
+# 已有
+Node.js 24.22.3
+npm 11.19.1
+Python 3（系统自带，辅助脚本）
+# 本次实际安装
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+cargo 1.100.0 (3acc79c0c 2026-11-05)
+rustfmt / clippy（Rust 1.100.0 对应组件）
+PostgreSQL server/client 14.24 (14.24-0ubuntu0.22.04.1)
+GCC/G++ 11.4.0
+build-essential 12.9ubuntu3
+pkg-config 0.29.2
+libssl-dev 3.0.2-0ubuntu1.30
+# 项目依赖
+前端：frontend/package.json + package-lock.json（React 19.2.0，Tiptap 3.11.0，Vite 7.3.8，Vitest 4.1.12）
+后端：backend/Cargo.toml + Cargo.lock（Axum 0.8.9，SQLx 0.8.6，Tokio 1.54.1）
+全部依赖许可证及精确解析版本：docs/licenses.json
+# 环境状态
+本机 PostgreSQL 14/main，开发库 wiki_dev，独立测试库 wiki_test。
+网络需沙箱外审批；系统包一次502重试后安装成功。未安装Docker；生产容器构建属于T49。
