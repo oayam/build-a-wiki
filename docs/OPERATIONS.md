@@ -67,3 +67,5 @@ Docker Hub超时而宿主curl正常：确认Docker守护进程代理。守护进
 权限边界字段只缓存树结构中的最近独立授权节点，不缓存用户角色；数据库触发器在移动/继承切换时事务内更新后代。账号状态、组成员和ACL始终实时计算。
 
 首版不包含实时协同、企业登录、评论通知和导入导出。历史对照为标题/纯文本并排，未提供逐字差异高亮。UI包含大vendor分包，首次加载仍有优化空间。
+
+生产备份调度模板为`deploy/wiki-backup.service`和`.timer`，每日03:00运行（随机延迟不超过5分钟，错过启动后补跑）。部署到`/opt/build-a-wiki`并准备`/etc/build-a-wiki/backup.env`后，将模板安装到systemd目录，执行`systemctl enable --now wiki-backup.timer`，先手动启动一次service并检查备份及日志。BACKUP_MOUNT和BACKUP_ROOT必须由部署者指向实际独立存储；挂载不存在时脚本拒绝回落到本地目录，；本次未擅自创建外部存储或启用针对未知正式实例的定时任务。备份长期保留清理应按实际容量设置，模板不自动删除已有备份。

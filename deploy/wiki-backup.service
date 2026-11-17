@@ -1,0 +1,13 @@
+[Unit]
+Description=Build-a-Wiki consistent database and attachment backup
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+EnvironmentFile=/etc/build-a-wiki/backup.env
+WorkingDirectory=/opt/build-a-wiki
+ExecStart=/usr/bin/bash /opt/build-a-wiki/scripts/scheduled-backup.sh

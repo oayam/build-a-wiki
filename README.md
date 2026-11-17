@@ -54,3 +54,5 @@ bash scripts/contracts.sh --write
 真实浏览器验收：安装 `cd frontend && npx playwright install --with-deps chromium` 后，先 `cargo build --manifest-path backend/Cargo.toml`，再从根目录运行 `TEST_DATABASE_URL=... python3 scripts/e2e.py`。脚本自行初始化随机schema/管理员密码并启动服务，成功后清理，失败保留schema和trace诊断。身份配置和权限规则见 docs/IDENTITY.md。
 
 部署、离线包、备份恢复与故障诊断：[运维手册](docs/OPERATIONS.md)。实际性能、恢复和故障结果分别见 docs/benchmark-optimized.json、docs/recovery-drill.json、docs/fault-drill.json。
+
+当前已完成T01～T58，提供0.1.0-rc1发布候选；T59真实试用及T60正式发布尚待完成，入口和反馈流程见[试用记录](docs/TRIAL.md)。

@@ -1,0 +1,32 @@
+{
+  "project": "wiki-offline",
+  "origin": "https://127.0.0.1:18445",
+  "seconds": 15.780117591999442,
+  "tls": "SAN verified via test CA for readiness; browser test explicitly trusts test certificate",
+  "network": "API/database network internal; gateway outbound NEW connections blocked during browser acceptance; pulls forbidden",
+  "tests": [
+    "attachment/image/search/trash/audit",
+    "draft/conflict/history/move/recent",
+    "Secure cookie/CSRF Origin/CSP"
+  ],
+  "images": [
+    {
+      "tags": [
+        "build-a-wiki-api:0.1.0-rc1"
+      ],
+      "id": "sha256:91b2a112539f1b001757a8cbf16d84dc14b3f843b1493c0446f71b7e37752e92"
+    },
+    {
+      "tags": [
+        "build-a-wiki-gateway:0.1.0-rc1"
+      ],
+      "id": "sha256:87952fa5f1a84ab557ee5af5933658a0ba67d71565ca3fc5b2f4a2c87f2f5647"
+    },
+    {
+      "tags": [
+        "postgres:14.24-bookworm"
+      ],
+      "id": "sha256:f23a2b27c0e11dce0d413c5ceb5ec747257a9961317587794e39c5ec4c49fd5c"
+    }
+  ]
+}
