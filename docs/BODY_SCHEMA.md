@@ -9,3 +9,5 @@ schema_version=1，Tiptap JSON 为事实来源。标题单独保存并共同版�
 本阶段编辑器只在浏览器内运行，不保存共享版本，也不冒充已实现业务接口。
 
 DOM 原型验证发现 StarterKit 默认 trailingNode 会在表格后自动添加段落，导致重新加载后 JSON 变化；现已显式禁用 trailingNode，确保无编辑操作的 JSON 往返严格一致。
+
+T25：Rust校验器 backend/src/body.rs 强制版本、2MiB正文、64层嵌套、节点/marks/attrs白名单与结构约束；链接仅http/https/mailto，图片仅接受附件UUID下载路径。中文/代码/表格样例现由 fixtures/body-v1.json 跨前后端共享。正文纯文本由后端生成，不信任客户端。
