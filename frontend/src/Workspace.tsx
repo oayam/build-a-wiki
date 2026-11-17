@@ -1,4 +1,5 @@
 import React from "react";
+import { captureDialogTrigger } from "./useDialogFocusReturn";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Input, Spin } from "antd";
@@ -128,7 +129,10 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   const cursor = next === undefined ? libraries.data?.next_cursor : next;
   return (
     <CreatedNodeContext.Provider value={createdNode}>
-      <div className={`shell ${collapsed ? "sidebar-collapsed" : ""}`}>
+      <div
+        className={`shell ${collapsed ? "sidebar-collapsed" : ""}`}
+        onClickCapture={captureDialogTrigger}
+      >
         <header className="topbar">
           <Link className="brand" to="/" aria-label="Build-a-Wiki 首页">
             <span className="brand-mark">

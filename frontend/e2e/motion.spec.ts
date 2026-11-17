@@ -42,19 +42,40 @@ for (const reduced of [false, true]) {
       .click();
     const modal = page.getByRole("dialog", { name: "新建知识库", exact: true });
     await expect(modal).toBeVisible();
+    await modal.getByLabel("新建知识库名称").fill("焦点回归");
     await modal.getByRole("button", { name: /取\s*消/ }).click();
     await expect(modal).toHaveCount(0);
+    const addLibrary = sidebar.getByRole("button", {
+      name: "新建知识库",
+      exact: true,
+    });
+    await expect(addLibrary).toBeFocused();
+    await expect(addLibrary).toHaveCSS("outline-style", "none");
+
     if (!reduced) {
       await expect.poll(events).toContain("dialog-arrive");
       await expect.poll(events).toContain("dialog-leave");
     }
+    // Keyboard openers retain a visible ring after Escape, including reduced motion.
+    await page.keyboard.press("Tab");
+    await addLibrary.focus();
+    await expect(addLibrary).toHaveCSS("outline-style", "solid");
+    await addLibrary.press("Enter");
+    await expect(modal).toBeVisible();
+    await modal.getByLabel("新建知识库名称").focus();
+    await page.keyboard.press("Escape");
+    await expect(modal).toHaveCount(0);
+    await expect(addLibrary).toBeFocused();
+    await expect(addLibrary).toHaveCSS("outline-style", "solid");
     // Both closing and reopening remain operable after a modal's exit animation.
     await sidebar
       .getByRole("button", { name: "新建知识库", exact: true })
       .click();
     const name = `动画验收-${reduced ? "简化" : "标准"}`;
     await modal.getByLabel("新建知识库名称").fill(name);
-    await modal.getByRole("button", { name: "确认创建知识库" }).click();
+    await modal.getByLabel("新建知识库名称").press("Enter");
+    await expect(modal).toHaveCount(0);
+    await expect(addLibrary).toHaveCSS("outline-style", "none");
     await expect(
       page.getByRole("heading", { name, exact: true }),
     ).toBeVisible();
@@ -77,6 +98,35 @@ for (const reduced of [false, true]) {
         .locator('[data-created="true"]')
         .getByRole("link", { name: "打开页面：动画正文", exact: true }),
     ).toBeVisible();
+    const addChild = sidebar.getByRole("button", {
+      name: "创建子页面：动画正文",
+      exact: true,
+    });
+    await addChild.click();
+    const childDialog = page.getByRole("dialog", {
+      name: "创建子页面",
+      exact: true,
+    });
+    await childDialog.getByLabel("新建页面标题").fill("焦点子页面");
+    await childDialog.getByLabel("新建页面标题").press("Enter");
+    await expect(childDialog).toHaveCount(0);
+    await expect(addChild).toBeFocused();
+    await expect(addChild).toHaveCSS("outline-style", "none");
+    await page
+      .getByRole("heading", { name: "焦点子页面", exact: true })
+      .click();
+    const outlines = await addChild.evaluate(async (el) => {
+      const values: string[] = [];
+      for (let frame = 0; frame < 12; frame++) {
+        await new Promise(requestAnimationFrame);
+        values.push(getComputedStyle(el).outlineStyle);
+      }
+      return values;
+    });
+    expect(outlines.every((value) => value === "none")).toBe(true);
+    await sidebar
+      .getByRole("link", { name: "打开页面：动画正文", exact: true })
+      .click();
     if (!reduced) await expect.poll(events).toContain("node-highlight");
     // The sidebar and content must share an edge even during a reversed transition.
     const expanded = await sidebar.evaluate(

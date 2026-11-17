@@ -1,5 +1,6 @@
 import React from "react";
-import { useReducedMotion, notifyCreatedNode } from "./Motion";
+import { useDialogFocusReturn } from "./useDialogFocusReturn";
+import { notifyCreatedNode } from "./Motion";
 import { Alert, Form, Input, Modal } from "antd";
 import { useNavigate } from "react-router-dom";
 import { request } from "./session";
@@ -13,11 +14,8 @@ export default function CreatePageDialog({
   onClose: () => void;
 }) {
   const [form] = Form.useForm();
-  const reduced = useReducedMotion();
-  const close = () => {
-    if (reduced) onClose();
-    else setVisible(false);
-  };
+  const restoreFocus = useDialogFocusReturn();
+  const close = () => setVisible(false);
   const [visible, setVisible] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -56,7 +54,11 @@ export default function CreatePageDialog({
   return (
     <Modal
       open={visible}
-      afterClose={onClose}
+      focusTriggerAfterClose={false}
+      afterClose={() => {
+        restoreFocus();
+        onClose();
+      }}
       transitionName="wiki-dialog"
       maskTransitionName="wiki-mask"
       title={target.parent ? "创建子页面" : "创建页面"}

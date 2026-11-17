@@ -1021,6 +1021,12 @@ summary:focus-visible {
   outline: 2px solid #4686ee;
   outline-offset: 2px;
 }
+/* Programmatic return to a pointer opener must not inherit the input's ring.
+   The marker is cleared on blur or the next keyboard interaction. */
+.tree-create[data-pointer-focus-return]:focus,
+.directory-create[data-pointer-focus-return]:focus {
+  outline: none;
+}
 .tree-create:disabled {
   color: #b5c1d4;
   cursor: not-allowed;
