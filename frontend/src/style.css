@@ -872,36 +872,17 @@ summary:focus-visible {
   padding: 0;
   color: #52739e;
 }
-.document-settings-menu {
-  display: grid;
-  gap: 8px;
-  padding-top: 8px;
+.document-settings-dropdown .ant-dropdown-menu {
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid #e2eaf6;
 }
-.document-settings-menu a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  color: #34527c;
-  background: #f6f9fe;
-  transition:
-    background-color 120ms ease,
-    color 120ms ease;
+.document-settings-dropdown .ant-dropdown-menu-item {
+  min-height: 40px;
 }
-.document-settings-menu a:hover {
-  background: #eaf2ff;
-  color: #165cda;
-}
-.document-settings-menu .document-tool-danger {
-  margin-top: 8px;
-  color: #b43e45;
-  background: #fff5f5;
-}
-.document-settings-menu .document-tool-danger:hover {
-  background: #ffe8e8;
-  color: #a72d36;
+.document-settings-dropdown .ant-dropdown-menu-item-icon {
+  width: 18px;
+  height: 18px;
 }
 .workspace-crumb {
   overflow: hidden;

@@ -5,7 +5,7 @@ import Icon from "./Icon";
 import EditorToolbar from "./EditorToolbar";
 import { Collapse, MotionAlert, TreeRow, notifyCreatedNode } from "./Motion";
 import type { CreatePageTarget } from "./CreatePageDialog";
-import { Alert, Button, Input, Form, Space, Spin, Empty, Modal } from "antd";
+import { Alert, Button, Input, Form, Space, Spin, Empty, Dropdown } from "antd";
 import {
   Link,
   NavLink,
@@ -452,56 +452,63 @@ function Document({
               </Button>
             </>
           )}
-          <Button
-            className="document-settings-trigger"
-            aria-label="页面设置"
-            title="页面设置"
-            aria-haspopup="dialog"
-            aria-expanded={settingsOpen}
-            icon={<Icon name="settings" />}
-            onClick={() => setSettingsOpen(true)}
-          />
+          <Dropdown
+            trigger={["click"]}
+            placement="bottomRight"
+            autoFocus
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            overlayClassName="document-settings-dropdown"
+            menu={{
+              "aria-label": "页面设置",
+              onClick: () => setSettingsOpen(false),
+              items: [
+                {
+                  key: "permissions",
+                  icon: <Icon name="shield" />,
+                  label: (
+                    <Link to={`/pages/${page.id}/permissions`}>页面权限</Link>
+                  ),
+                },
+                {
+                  key: "history",
+                  icon: <Icon name="history" />,
+                  label: <Link to={`/pages/${page.id}/history`}>版本历史</Link>,
+                },
+                ...(page.role >= 3
+                  ? [
+                      {
+                        key: "move",
+                        icon: <Icon name="move" />,
+                        label: (
+                          <Link to={`/pages/${page.id}/move`}>移动与排序</Link>
+                        ),
+                      },
+                      { type: "divider" as const },
+                      {
+                        key: "delete",
+                        danger: true,
+                        icon: <Icon name="trash" />,
+                        label: (
+                          <Link to={`/pages/${page.id}/delete`}>删除页面</Link>
+                        ),
+                      },
+                    ]
+                  : []),
+              ],
+            }}
+          >
+            <Button
+              className="document-settings-trigger"
+              aria-label="页面设置"
+              title="页面设置"
+              aria-haspopup="menu"
+              aria-expanded={settingsOpen}
+              icon={<Icon name="settings" />}
+            />
+          </Dropdown>
         </Space>
       </div>
-      <Modal
-        title="页面设置"
-        open={settingsOpen}
-        onCancel={() => setSettingsOpen(false)}
-        footer={null}
-        width={360}
-        transitionName="wiki-dialog"
-        maskTransitionName="wiki-mask"
-      >
-        <nav
-          className="document-settings-menu"
-          aria-label="页面操作"
-          onClick={() => setSettingsOpen(false)}
-        >
-          <Link to={`/pages/${page.id}/permissions`}>
-            <Icon name="shield" />
-            页面权限
-          </Link>
-          <Link to={`/pages/${page.id}/history`}>
-            <Icon name="history" />
-            版本历史
-          </Link>
-          {page.role >= 3 && (
-            <Link to={`/pages/${page.id}/move`}>
-              <Icon name="move" />
-              移动与排序
-            </Link>
-          )}
-          {page.role >= 3 && (
-            <Link
-              className="document-tool-danger"
-              to={`/pages/${page.id}/delete`}
-            >
-              <Icon name="trash" />
-              删除页面
-            </Link>
-          )}
-        </nav>
-      </Modal>
       <MotionAlert
         visible={!!message}
         type="success"
