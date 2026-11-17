@@ -28,6 +28,13 @@ impl Config {
         Self::parse(|k| std::env::var(k).ok())
     }
     pub fn parse(get: impl Fn(&str) -> Option<String>) -> Result<Self, String> {
+        if let Some(value) = get("UPLOAD_MAX_BYTES")
+            && !value
+                .parse::<u64>()
+                .is_ok_and(|n| (1..=1024 * 1024 * 1024).contains(&n))
+        {
+            return Err("UPLOAD_MAX_BYTES must be 1..1073741824".into());
+        }
         let database_url = get("DATABASE_URL")
             .filter(|v| v.starts_with("postgres://") || v.starts_with("postgresql://"))
             .ok_or("DATABASE_URL must be a PostgreSQL URL")?;

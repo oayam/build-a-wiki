@@ -1,0 +1,12 @@
+FROM rust:1.100.0-bookworm AS build
+WORKDIR /src
+COPY backend/ ./
+RUN cargo build --locked --release --bins
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates coreutils && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home wiki
+COPY --from=build /src/target/release/wiki-api /src/target/release/migrate /src/target/release/bootstrap /src/target/release/maintenance /src/target/release/reset-password /usr/local/bin/
+RUN mkdir -p /data/attachments && chown -R wiki:wiki /data
+USER 10001:10001
+ENV BIND_ADDR=0.0.0.0:8080 ATTACHMENT_DIR=/data/attachments LOG_LEVEL=info
+EXPOSE 8080
+CMD ["wiki-api"]

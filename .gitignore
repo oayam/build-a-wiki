@@ -15,3 +15,5 @@ config.toml.merged
 # Browser test artifacts
 frontend/test-results/
 frontend/playwright-report/
+__pycache__/
+*.pyc

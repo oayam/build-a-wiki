@@ -39,6 +39,23 @@ pub async fn tick(pool: &sqlx::PgPool, root: &Path) -> Result<bool, sqlx::Error>
     let Some((id, kind, payload, attempts)) = job else {
         return Ok(false);
     };
+    // Manual retries cannot bypass upload grace time or trash retention.
+    if let Some(resource) = payload["id"].as_str().and_then(|s| Uuid::parse_str(s).ok()) {
+        let wait=match kind.as_str(){
+            "expire_upload"=>sqlx::query_scalar::<_,f64>("SELECT extract(epoch FROM created_at+interval '1 hour'-now())::float8 FROM attachments WHERE id=$1 AND status='pending' AND created_at>now()-interval '1 hour'").bind(resource).fetch_optional(&mut *tx).await?,
+            "purge_batch"=>sqlx::query_scalar::<_,f64>("SELECT extract(epoch FROM max(deleted_at)+interval '30 days'-now())::float8 FROM pages WHERE deletion_batch_id=$1 HAVING max(deleted_at)>now()-interval '30 days'").bind(resource).fetch_optional(&mut *tx).await?,
+            _=>None,
+        };
+        if let Some(wait) = wait {
+            sqlx::query("UPDATE jobs SET available_at=now()+make_interval(secs=>$2) WHERE id=$1")
+                .bind(id)
+                .bind(wait + 1.0)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            return Ok(true);
+        }
+    }
     sqlx::query("SAVEPOINT job_effect")
         .execute(&mut *tx)
         .await?;

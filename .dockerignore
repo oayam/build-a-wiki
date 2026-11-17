@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+.data
+.tools
+.temp*
+node_modules
+**/node_modules
+**/target
+**/dist
+**/test-results
+**/playwright-report
+*.log

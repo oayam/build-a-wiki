@@ -1,6 +1,6 @@
 # Build-a-Wiki
 
-T0～T36：中文登录与账号/组管理、私有知识库和权限管理、页面树、富文本阅读编辑、个人草稿、共享版本与历史恢复、最近访问、页面移动排序。附件上传、搜索与回收站属于下一分组。
+T0～T48：中文登录与账号/组管理、私有知识库和权限管理、页面树、富文本阅读编辑、个人草稿、共享版本与历史恢复、最近访问、页面移动排序。附件上传下载、回收站、搜索及人员筛选、审计与任务状态均已实现。生产部署和验证记录见 docs/OPERATIONS.md。
 
 ## 本机开发
 
@@ -49,6 +49,8 @@ bash scripts/contracts.sh --write
 
 进入知识库后可创建页面或子页面。编辑会自动保存个人草稿；只有“保存共享版本”才会向其他成员发布。版本冲突会保留本地内容，可查看最新正文并复制或明确采用新基准重试。历史恢复生成新版本，个人草稿由用户选择保留或丢弃。移动需要管理整棵子树、可编辑目标位置，并先确认权限变化预览；页面 URL 始终不变。
 
-运行 `make migrate` 应用 0004～0006 增量迁移后再启动后端。已有账号和知识库保留；无需重新初始化管理员。所有正文、历史、草稿、目录和最近访问入口均按当前权限鉴权。
+运行 `make migrate` 应用 0004～0012 增量迁移后再启动后端。已有账号和知识库保留；无需重新初始化管理员。所有正文、历史、草稿、目录和最近访问入口均按当前权限鉴权。
 
 真实浏览器验收：安装 `cd frontend && npx playwright install --with-deps chromium` 后，先 `cargo build --manifest-path backend/Cargo.toml`，再从根目录运行 `TEST_DATABASE_URL=... python3 scripts/e2e.py`。脚本自行初始化随机schema/管理员密码并启动服务，成功后清理，失败保留schema和trace诊断。身份配置和权限规则见 docs/IDENTITY.md。
+
+部署、离线包、备份恢复与故障诊断：[运维手册](docs/OPERATIONS.md)。实际性能、恢复和故障结果分别见 docs/benchmark-optimized.json、docs/recovery-drill.json、docs/fault-drill.json。

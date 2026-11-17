@@ -1,0 +1,10 @@
+{
+  "passed": [
+    "actual ENOSPC upload failure",
+    "committed revision survives failure",
+    "SIGKILL during partial upload",
+    "restart compensates pending rows and files",
+    "maintenance rejects writes"
+  ],
+  "storage": "private tmpfs 1MiB"
+}

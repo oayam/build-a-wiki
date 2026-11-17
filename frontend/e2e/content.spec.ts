@@ -24,13 +24,11 @@ test("attachments, literal search, trash restore, audit and offline local resour
     page.getByRole("heading", { name: "附件百分比100%" }),
   ).toBeVisible();
   const url = page.url();
-  await page
-    .getByLabel("选择附件")
-    .setInputFiles({
-      name: "中文资料.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("仅内网可读的附件"),
-    });
+  await page.getByLabel("选择附件").setInputFiles({
+    name: "中文资料.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("仅内网可读的附件"),
+  });
   await page.getByRole("button", { name: "上传附件（失败可重试）" }).click();
   const link = page.getByRole("link", { name: "中文资料.txt", exact: true });
   await expect(link).toBeVisible();
@@ -42,6 +40,37 @@ test("attachments, literal search, trash restore, audit and offline local resour
   await page.getByRole("button", { name: "插入正文", exact: true }).click();
   await page.getByRole("button", { name: "保存共享版本" }).click();
   await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
+  await page
+    .getByLabel("选择附件")
+    .setInputFiles({
+      name: "示例图片.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5uQAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    });
+  await page.getByRole("button", { name: "上传附件（失败可重试）" }).click();
+  await expect(
+    page.getByRole("link", { name: "示例图片.png", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "编辑页面", exact: true }).click();
+  await page
+    .locator("li")
+    .filter({
+      has: page.getByRole("link", { name: "示例图片.png", exact: true }),
+    })
+    .getByRole("button", { name: "插入正文", exact: true })
+    .click();
+  await page.getByRole("button", { name: "保存共享版本" }).click();
+  await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator(".tiptap img")
+        .evaluate((img) => (img as HTMLImageElement).naturalWidth),
+    )
+    .toBe(1);
   await page.getByRole("link", { name: "搜索", exact: true }).click();
   await page.getByLabel("搜索关键词").fill("100%");
   await page.getByRole("button", { name: "执行搜索" }).click();

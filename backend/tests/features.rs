@@ -121,6 +121,12 @@ async fn attachments_are_streamed_idempotent_compensated_and_reauthorized() {
         "0".repeat(64)
     );
     assert_eq!(raw(&app, "POST", &corrupt, bytes, &c, t).await.0, 422);
+    sqlx::query(
+        "UPDATE attachments SET created_at=now()-interval '2 hours' WHERE status='pending'",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
     sqlx::query("UPDATE jobs SET available_at=now()")
         .execute(&pool)
         .await

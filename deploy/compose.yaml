@@ -1,0 +1,67 @@
+name: build-a-wiki
+services:
+  postgres:
+    image: postgres:14.24-bookworm
+    environment:
+      POSTGRES_USER: wiki
+      POSTGRES_DB: wiki
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a strong database password}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wiki -d wiki"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks: [internal]
+  migrate:
+    image: build-a-wiki-api:${WIKI_VERSION:-0.1.0-rc1}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    command: [migrate]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set encoded database URL}
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [internal]
+    read_only: true
+    cap_drop: [ALL]
+  api:
+    image: build-a-wiki-api:${WIKI_VERSION:-0.1.0-rc1}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set encoded database URL}
+      APP_BASE_URL: ${APP_BASE_URL:?Set HTTPS origin}
+      APP_ENV: production
+      SESSION_TTL: 28800
+      UPLOAD_MAX_BYTES: 52428800
+    volumes: [attachments:/data/attachments]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    networks: [internal]
+  gateway:
+    image: build-a-wiki-gateway:${WIKI_VERSION:-0.1.0-rc1}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.gateway
+    ports: ["${WIKI_BIND:-127.0.0.1}:${WIKI_PORT:-8443}:8443"]
+    volumes: ["${TLS_DIR:?Set TLS certificate directory}:/etc/wiki-tls:ro"]
+    depends_on: [api]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    networks: [internal, edge]
+volumes:
+  database:
+  attachments:
+networks:
+  internal: {internal: true}
+  edge: {}

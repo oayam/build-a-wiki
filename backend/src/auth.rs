@@ -40,6 +40,9 @@ impl Security {
             return Err("APP_BASE_URL must be an origin without trailing slash".into());
         }
         let secure = uri.scheme_str() == Some("https");
+        if std::env::var("APP_ENV").as_deref() == Ok("production") && !secure {
+            return Err("production requires HTTPS".into());
+        }
         if !secure && !matches!(uri.host(), Some("localhost" | "127.0.0.1" | "[::1]")) {
             return Err("non-local deployment requires HTTPS".into());
         }
@@ -212,6 +215,7 @@ pub async fn login(
    sqlx::query("UPDATE login_attempts SET failures=failures+1 WHERE username IN($1,'__global__')").bind(&input.username).execute(&mut *tx).await?;
    audit(&mut tx,None,"auth.failed",None,&id.0,serde_json::json!({})).await?;tx.commit().await?;return Err(unauth());
   }
+  if state.security.secure && input.password.chars().count()<12{return Err(Failure(StatusCode::FORBIDDEN,"PASSWORD_POLICY_REQUIRED","请由管理员重置为至少12字符的新密码"));}
   let user_id=row.unwrap().0;let token=random_token();let csrf=random_token();
   sqlx::query("INSERT INTO sessions(id,user_id,token_hash,csrf_token,expires_at) VALUES($1,$2,$3,$4,now()+make_interval(secs=>$5))").bind(Uuid::new_v4()).bind(user_id).bind(token_hash(&token)).bind(&csrf).bind(f64::from(state.security.ttl)).execute(&mut *tx).await?;
   sqlx::query("DELETE FROM login_attempts WHERE username=$1").bind(&input.username).execute(&mut *tx).await?;

@@ -67,10 +67,10 @@ export default function Users() {
         <Form.Item name="display_name" rules={[{ required: true }]}>
           <Input aria-label="显示名称" placeholder="显示名称" />
         </Form.Item>
-        <Form.Item name="password" rules={[{ required: true, min: 8 }]}>
+        <Form.Item name="password" rules={[{ required: true, min: 12 }]}>
           <Input.Password
             aria-label="初始密码"
-            placeholder="至少8字符（临时）的初始密码"
+            placeholder="至少12字符的初始密码"
           />
         </Form.Item>
         <Button htmlType="submit" loading={busy}>
@@ -146,10 +146,10 @@ export default function Users() {
             options={users.map((u) => ({ value: u.id, label: u.username }))}
           />
         </Form.Item>
-        <Form.Item name="password" rules={[{ required: true, min: 8 }]}>
+        <Form.Item name="password" rules={[{ required: true, min: 12 }]}>
           <Input.Password
             aria-label="新密码"
-            placeholder="新密码（至少8字符（临时））"
+            placeholder="新密码（至少12字符）"
           />
         </Form.Item>
         <Button htmlType="submit" loading={busy}>

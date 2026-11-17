@@ -2,11 +2,10 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_ha
 use sha2::{Digest, Sha256};
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
-// TODO(SEC-001): 正式部署前恢复12字符下限，并同步前端、测试和账号改密；见 docs/TODO.md。
-const MIN_PASSWORD_CHARS: usize = 8;
+const MIN_PASSWORD_CHARS: usize = 12;
 pub fn hash_password(password: &str) -> Result<String, String> {
     if password.chars().count() < MIN_PASSWORD_CHARS || password.len() > 256 {
-        return Err("密码至少8个字符，最多256字节（临时开发策略）".into());
+        return Err("密码至少12个字符，最多256字节".into());
     }
     let salt = SaltString::encode_b64(Uuid::new_v4().as_bytes()).map_err(|_| "密码处理失败")?;
     Argon2::default()
@@ -42,6 +41,15 @@ pub async fn audit(
     request_id: &str,
     details: serde_json::Value,
 ) -> Result<(), sqlx::Error> {
+    guard(tx).await?;
+    let maintenance: bool = sqlx::query_scalar("SELECT maintenance FROM auth_guard WHERE id=1")
+        .fetch_one(&mut **tx)
+        .await?;
+    if maintenance && action != "system.maintenance" {
+        return Err(sqlx::Error::Protocol(
+            "maintenance blocks audit writes".into(),
+        ));
+    }
     let mut safe = serde_json::Map::new();
     if let Some(map) = details.as_object() {
         for key in ["role", "active", "acl_version", "member_count", "owner_id"] {
@@ -91,10 +99,10 @@ pub async fn bootstrap(
 mod password_policy_tests {
     use super::*;
     #[test]
-    fn temporary_minimum_and_hash_verification() {
-        assert!(hash_password("1234567").is_err());
-        let hash = hash_password("test123.").unwrap();
-        assert!(verify_password("test123.", &hash));
+    fn minimum_and_hash_verification() {
+        assert!(hash_password("12345678901").is_err());
+        let hash = hash_password("test1234567.").unwrap();
+        assert!(verify_password("test1234567.", &hash));
         assert!(!verify_password("wrong123", &hash));
         assert!(hash_password(&"a".repeat(257)).is_err());
     }
