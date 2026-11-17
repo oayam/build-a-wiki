@@ -8,10 +8,14 @@
   --border: #e1e8f2;
   --topbar-height: 58px;
   --topbar-gradient-angle: 110deg;
-  --topbar-blue-start: #5284d4;
-  --topbar-blue-middle: #416fba;
-  --topbar-blue-end: #365e99;
+  --topbar-blue-start: #5b8bd5;
+  --topbar-blue-middle: #4e7fc4;
+  --topbar-blue-end: #446fae;
   --topbar-gradient-middle: 58%;
+  --topbar-focus-color: #fff3bf;
+  --topbar-focus-width: 2px;
+  --topbar-focus-offset: 2px;
+  --topbar-focus-radius: 8px;
   --sidebar-resizer-width: 8px;
   --sidebar-resizer-line-width: 2px;
   --sidebar-resizer-color: #78a2e3;
@@ -1642,4 +1646,19 @@ summary:focus-visible {
 .sidebar .page-tree-row > a:focus-visible {
   outline: var(--directory-focus-width) solid var(--directory-focus-color);
   outline-offset: calc(-1 * var(--directory-focus-width));
+}
+
+.topbar a:focus-visible,
+.topbar button:focus-visible,
+.topbar .account .ant-btn:focus-visible,
+.topbar .global-search .ant-input-affix-wrapper:focus-within {
+  outline: var(--topbar-focus-width) solid var(--topbar-focus-color);
+  outline-offset: var(--topbar-focus-offset);
+}
+.topbar .brand {
+  border-radius: var(--topbar-focus-radius);
+}
+.topbar .global-search .ant-input-affix-wrapper:focus-within {
+  border-color: var(--topbar-focus-color);
+  box-shadow: none;
 }

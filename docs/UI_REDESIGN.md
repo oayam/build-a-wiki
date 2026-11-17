@@ -199,3 +199,9 @@ docker compose --env-file .data/compose-test.env -p wiki-acceptance \
 最新截图 `bugreport/figure/bug-add-focus-frame-size-error.png` 显示加号焦点框右边缘被裁剪。创建按钮仍使用向外 2px 的 outline-offset，现统一改为 -2px 内描边，适用于目录标题、知识库和页面创建按钮；宽度、颜色引用 CSS 常量。保留鼠标触发弹窗恢复时不显示键盘焦点框的逻辑。
 
 正常及减少动态效果两项回归通过（12.8 秒），实际浏览器确认按钮保持 28px 高，焦点框为 2px 内描边且四边完整；生产构建通过。本地镜像 `ca4f80f37be4`，无新增依赖。
+
+## 顶部背景与焦点对比
+
+针对 `bugreport/figure/frame-focus-on-top.png` 中蓝色焦点框与蓝色背景不易区分的问题，将顶部渐变调浅为 `#5b8bd5` → `#4e7fc4` → `#446fae`，顶部焦点框统一采用浅金色 `#fff3bf`。Logo 和按钮保留键盘 focus-visible，搜索框在 focus-within 时围绕完整输入框描边；单独覆盖退出按钮的组件默认样式，避免颜色被覆盖。数值和颜色通过 CSS 自定义属性定义。
+
+生产构建通过，实际 HTTPS 界面在 1440px/390px 分别验证 Logo、搜索框与退出按钮的描边颜色和显示状态，六处检查通过，截图见 `ui/topbar-focus-desktop.png`、`ui/topbar-focus-mobile.png`。本地镜像 `6c64434cbed6`，无新增依赖。
