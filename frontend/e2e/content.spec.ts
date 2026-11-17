@@ -71,9 +71,8 @@ test("attachments, literal search, trash restore, audit and offline local resour
         .evaluate((img) => (img as HTMLImageElement).naturalWidth),
     )
     .toBe(1);
-  await page.getByRole("link", { name: "搜索", exact: true }).click();
-  await page.getByLabel("搜索关键词").fill("100%");
-  await page.getByRole("button", { name: "执行搜索" }).click();
+  await page.getByLabel("全局搜索").fill("100%");
+  await page.getByLabel("全局搜索").press("Enter");
   await page.getByRole("link", { name: "附件百分比100%", exact: true }).click();
   await expect(page).toHaveURL(url);
   await page.getByRole("link", { name: "删除页面", exact: true }).click();

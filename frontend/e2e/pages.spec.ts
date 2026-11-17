@@ -82,7 +82,7 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   await page.getByRole("button", { name: "确认移动", exact: true }).click();
   await page.getByRole("button", { name: /确\s*定/ }).click();
   await expect(page).toHaveURL(url);
-  await page.getByRole("link", { name: "我的知识库", exact: true }).click();
+  await page.getByRole("link", { name: "Build-a-Wiki 首页", exact: true }).click();
   await expect(page.getByRole("heading", { name: "最近访问" })).toBeVisible();
   await page.getByRole("link", { name: "并发页面", exact: true }).click();
   await expect(page).toHaveURL(url);

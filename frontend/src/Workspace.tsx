@@ -80,13 +80,9 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
     if (current)
       setOpen((old) => (old.includes(current) ? old : [...old, current]));
   }, [current]);
-  const links: { to: string; text: string; icon: IconName }[] = [
-    { to: "/", text: "我的知识库", icon: "home" },
+  const management: { to: string; text: string; icon: IconName }[] = [
     { to: "/shared", text: "与我共享", icon: "users" },
-    { to: "/search", text: "搜索", icon: "search" },
     { to: "/trash", text: "回收站", icon: "trash" },
-  ];
-  const management: typeof links = [
     ...(user.is_system_admin
       ? [
           { to: "/admin/users", text: "账号与用户组", icon: "users" as const },
@@ -101,7 +97,10 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
     { to: "/editor", text: "编辑器验证", icon: "code" },
   ];
   const routeTitle =
-    [...links, ...management].find((x) => x.to === location.pathname)?.text ??
+    ({ "/": "我的知识库", "/search": "搜索" } as Record<string, string>)[
+      location.pathname
+    ] ??
+    management.find((x) => x.to === location.pathname)?.text ??
     (pageId ? "文档工作区" : "知识库");
   const cursor = next === undefined ? libraries.data?.next_cursor : next;
   return (
@@ -152,14 +151,6 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
         <div className="sidebar-body" hidden={collapsed}>
-          <nav className="primary-nav" aria-label="工作区入口">
-            {links.map((x) => (
-              <NavLink key={x.to} to={x.to} end={x.to === "/"}>
-                <Icon name={x.icon} />
-                {x.text}
-              </NavLink>
-            ))}
-          </nav>
           <div className="sidebar-section-label">
             知识库目录
             <button
