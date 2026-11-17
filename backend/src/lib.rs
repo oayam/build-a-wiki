@@ -3,7 +3,7 @@ use std::time::Duration;
 pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 pub async fn pool(url: &str) -> Result<PgPool, sqlx::Error> {
     PgPoolOptions::new()
-        .max_connections(10)
+        .max_connections(32)
         .acquire_timeout(Duration::from_secs(3))
         .connect(url)
         .await

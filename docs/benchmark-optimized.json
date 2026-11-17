@@ -1,0 +1,35 @@
+{
+  "pages": 100000,
+  "registered_users": 100,
+  "concurrency": 20,
+  "depth": 8,
+  "independent_boundaries": 1000,
+  "body_characters": 1020,
+  "seed_seconds": 8.16940190600144,
+  "environment": {
+    "cpu_count": 16,
+    "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
+  },
+  "metrics": {
+    "read": {
+      "count": 60,
+      "p50_ms": 19.388441500268527,
+      "p95_ms": 52.704719000757905,
+      "max_ms": 59.74794699977792
+    },
+    "save": {
+      "count": 60,
+      "p50_ms": 252.06232300024567,
+      "p95_ms": 385.97699100137106,
+      "max_ms": 459.67615799963824
+    },
+    "search": {
+      "count": 60,
+      "p50_ms": 91.23168649875879,
+      "p95_ms": 106.36556600002223,
+      "max_ms": 116.8022439997003
+    }
+  },
+  "errors": [],
+  "measurement": "all 20 sessions authenticated before timed read/save/search loops"
+}

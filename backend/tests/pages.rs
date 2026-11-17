@@ -506,5 +506,7 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
         .0,
         404
     );
+    let equivalent:bool=sqlx::query_scalar("SELECT bool_and(COALESCE(page_role(u.id,p.id),0)=COALESCE(a.role,0)) FROM users u CROSS JOIN pages p LEFT JOIN LATERAL (SELECT role FROM page_access(u.id) v WHERE v.id=p.id) a ON true").fetch_one(&pool).await.unwrap();
+    assert!(equivalent);
     common::cleanup(pool, admin, schema).await;
 }
