@@ -971,27 +971,54 @@ summary:focus-visible {
   border-radius: 0;
   box-shadow: none;
 }
-.tree-create {
-  display: grid;
-  place-items: center;
-  flex: 0 0 26px;
-  width: 26px;
+.tree-create,
+.directory-create {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
   height: 28px;
-  margin-left: 3px;
-  padding: 4px;
-  color: #5484d4;
-  background: transparent;
-  border: 0;
-  border-radius: 5px;
+  padding: 0;
+  line-height: 1;
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 7px;
   cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
 }
-.tree-create svg {
-  width: 16px;
-  height: 16px;
+.tree-create {
+  margin-left: 4px;
+  color: #6b8cbd;
+  background: transparent;
 }
-.tree-create:hover:not(:disabled) {
-  background: #dce9ff;
+.tree-create svg,
+.directory-create svg {
+  display: block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  color: inherit;
+}
+.tree-create:hover:not(:disabled),
+.directory-create:hover {
+  background: #e0ebff;
+  border-color: #b9d0f4;
   color: #165cda;
+}
+.tree-create:active:not(:disabled),
+.directory-create:active {
+  background: #d0e1fc;
+  border-color: #94b8ed;
+}
+.tree-create:focus-visible,
+.directory-create:focus-visible {
+  outline: 2px solid #4686ee;
+  outline-offset: 2px;
 }
 .tree-create:disabled {
   color: #b5c1d4;
@@ -1014,18 +1041,9 @@ summary:focus-visible {
   transform: rotate(180deg);
 }
 .directory-create {
-  display: grid;
-  place-items: center;
-  background: #e1ebff;
-  color: var(--blue);
-  border: 0;
-  border-radius: 5px;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
-}
-.directory-create:hover {
-  background: #cfe0ff;
+  background: #e6efff;
+  border-color: #d3e2fa;
+  color: #3e78d4;
 }
 
 .tree-loading {
