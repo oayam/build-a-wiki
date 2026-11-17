@@ -152,6 +152,28 @@ test("directory loading does not flash empty state or transient scrollbars", asy
   await page.setViewportSize({ width: 1200, height });
   await settle();
   expect(await metrics()).toEqual(before);
+  // Tool navigation must preserve the existing subtree, including manual expansion.
+  const leaf = await sidebar
+    .getByRole("link", { name: "打开页面：子页面", exact: true })
+    .elementHandle();
+  for (const name of ["与我共享", "回收站", "服务状态"]) {
+    await sidebar.getByRole("link", { name, exact: true }).click();
+    await expect(
+      sidebar.getByRole("button", { name: "收起-父页面" }),
+    ).toBeVisible();
+    expect(await leaf!.evaluate((el) => el.isConnected)).toBe(true);
+    await expect.poll(() => !!release).toBe(true);
+    await expect(
+      sidebar.getByRole("link", { name: "打开页面：子页面", exact: true }),
+    ).toBeVisible();
+    expect(await metrics()).toEqual(before);
+    const refreshed = page.waitForResponse((response) =>
+      new URL(response.url()).searchParams.has("parent_id"),
+    );
+    release!();
+    release = undefined;
+    await refreshed;
+  }
   // Cached rows disappear when a refresh reports revoked access.
   denyChildren = true;
   await sidebar.getByRole("button", { name: "收起-父页面" }).click();

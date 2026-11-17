@@ -45,13 +45,13 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   const pageId = location.pathname.match(/^\/pages\/([^/]+)/)?.[1];
   const libraryId = location.pathname.match(/^\/knowledge-bases\/([^/]+)/)?.[1];
   const libraries = useQuery({
-    queryKey: ["navigation", user.id, "libraries", location.pathname],
+    queryKey: ["navigation", user.id, "libraries"],
     queryFn: () =>
       request<components["schemas"]["KnowledgeList"]>("/knowledge-bases"),
     retry: false,
   });
   const page = useQuery({
-    queryKey: ["navigation", user.id, "page", pageId, location.pathname],
+    queryKey: ["navigation", user.id, "page", pageId],
     queryFn: () =>
       request<components["schemas"]["PageDetail"]>(`/pages/${pageId}`),
     enabled: !!pageId,
@@ -64,13 +64,19 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
     enabled: !!current,
     retry: false,
   });
-  const items = [
-    ...(libraries.data?.items ?? []),
-    ...more,
-    ...(activeLibrary.isSuccess && activeLibrary.data
-      ? [activeLibrary.data]
-      : []),
-  ].filter((k, i, all) => all.findIndex((x) => x.id === k.id) === i);
+  const items = libraries.isError
+    ? []
+    : [
+        ...(libraries.data?.items ?? []),
+        ...more,
+        ...(activeLibrary.isSuccess && activeLibrary.data
+          ? [activeLibrary.data]
+          : []),
+      ].filter((k, i, all) => all.findIndex((x) => x.id === k.id) === i);
+  // Route changes revalidate cached navigation without replacing the visible tree.
+  React.useEffect(() => {
+    void client.invalidateQueries({ queryKey: ["navigation", user.id] });
+  }, [client, user.id, location.pathname]);
   React.useEffect(() => {
     setMore([]);
     setNext(undefined);
@@ -245,7 +251,7 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
                     </button>
                   </TreeRow>
                   <PageTree
-                    key={`${k.id}:${location.pathname}`}
+                    key={k.id}
                     kb={k.id}
                     navigation
                     expanded={open.includes(k.id)}
