@@ -112,6 +112,18 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
   });
   await page.goto(`/pages/${ids.page}`);
   const sidebar = page.getByRole("complementary", { name: "知识库导航" });
+  const homeLink = sidebar.getByRole("link", {
+    name: "知识库首页",
+    exact: true,
+  });
+  await expect(homeLink).toHaveAttribute("href", "/");
+  await homeLink.click();
+  await expect(page).toHaveURL("/");
+  await expect(
+    page.getByRole("heading", { name: "我的知识库", exact: true }),
+  ).toBeVisible();
+  await page.goto(`/pages/${ids.page}`);
+
   await expect(
     sidebar.getByRole("link", {
       name: "打开页面：Build-a-Wiki 使用指南",

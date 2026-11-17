@@ -17,6 +17,8 @@ import Icon, { type IconName } from "./Icon";
 import { CreatedNodeContext, TreeRow, type CreatedNode } from "./Motion";
 import CreateLibraryDialog from "./CreateLibraryDialog";
 import CreatePageDialog, { type CreatePageTarget } from "./CreatePageDialog";
+const HOME_ROUTE = "/";
+const HOME_LINK_LABEL = "知识库首页";
 type K = components["schemas"]["KnowledgeBase"];
 export default function Workspace({ children }: { children: React.ReactNode }) {
   const { user } = useSession();
@@ -142,7 +144,11 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
         onClickCapture={captureDialogTrigger}
       >
         <header className="topbar">
-          <Link className="brand" to="/" aria-label="Build-a-Wiki 首页">
+          <Link
+            className="brand"
+            to={HOME_ROUTE}
+            aria-label="Build-a-Wiki 首页"
+          >
             <span className="brand-mark">
               <Icon name="book" />
             </span>
@@ -172,10 +178,15 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
         </header>
         <aside className="sidebar" aria-label="知识库导航">
           <div className="sidebar-heading">
-            <span>
+            <Link
+              className="sidebar-home"
+              to={HOME_ROUTE}
+              aria-label={HOME_LINK_LABEL}
+              title={HOME_LINK_LABEL}
+            >
               <Icon name="book" />
               知识库
-            </span>
+            </Link>
             <Button
               type="text"
               className="collapse-button"
@@ -334,7 +345,7 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
         )}
         <div className="content">
           <nav className="workspace-crumb" aria-label="页面路径">
-            <Link to="/" aria-label="返回工作台">
+            <Link to={HOME_ROUTE} aria-label="返回工作台">
               <Icon name="home" />
             </Link>
             <span>/</span>

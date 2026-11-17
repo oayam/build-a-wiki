@@ -172,7 +172,7 @@ kbd {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.sidebar-heading > span {
+.sidebar-heading > .sidebar-home {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -682,7 +682,7 @@ main > details {
 .sidebar-collapsed .sidebar-heading {
   padding: 0 12px;
 }
-.sidebar-collapsed .sidebar-heading > span {
+.sidebar-collapsed .sidebar-heading > .sidebar-home {
   display: none;
 }
 .sidebar-collapsed .collapse-button svg {
@@ -816,7 +816,7 @@ summary:focus-visible {
     height: 48px;
     padding: 0 16px;
   }
-  .sidebar-heading > span {
+  .sidebar-heading > .sidebar-home {
     font-size: 15px;
   }
   .sidebar-body {
@@ -835,7 +835,7 @@ summary:focus-visible {
   .sidebar-collapsed {
     grid-template-columns: 1fr;
   }
-  .sidebar-collapsed .sidebar-heading > span {
+  .sidebar-collapsed .sidebar-heading > .sidebar-home {
     display: flex;
   }
   .sidebar-collapsed .sidebar-heading {
@@ -1191,7 +1191,7 @@ summary:focus-visible {
     opacity 160ms ease,
     visibility 0s;
 }
-.sidebar-heading > span {
+.sidebar-heading > .sidebar-home {
   white-space: nowrap;
   overflow: hidden;
   max-width: 210px;
@@ -1217,7 +1217,7 @@ summary:focus-visible {
     opacity 100ms ease,
     visibility 0s 220ms;
 }
-.sidebar-collapsed .sidebar-heading > span {
+.sidebar-collapsed .sidebar-heading > .sidebar-home {
   display: flex;
   max-width: 0;
   opacity: 0;
@@ -1258,7 +1258,7 @@ summary:focus-visible {
       opacity 100ms ease,
       visibility 0s 220ms;
   }
-  .sidebar-collapsed .sidebar-heading > span {
+  .sidebar-collapsed .sidebar-heading > .sidebar-home {
     max-width: 210px;
     opacity: 1;
   }
@@ -1661,4 +1661,19 @@ summary:focus-visible {
 .topbar .global-search .ant-input-affix-wrapper:focus-within {
   border-color: var(--topbar-focus-color);
   box-shadow: none;
+}
+
+.sidebar-home {
+  color: inherit;
+}
+.sidebar-home:hover {
+  color: var(--blue);
+}
+.sidebar-collapsed .sidebar-home {
+  visibility: hidden;
+}
+@media (max-width: 760px) {
+  .sidebar-collapsed .sidebar-home {
+    visibility: visible;
+  }
 }
