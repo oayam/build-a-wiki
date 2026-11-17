@@ -453,17 +453,34 @@ function Document({
           )}
         </Space>
       </div>
-      <div className="document-links">
-        {" "}
-        <Link to={`/pages/${page.id}/permissions`}>页面权限</Link>
-        <Link to={`/pages/${page.id}/history`}>版本历史</Link>
-        {page.role >= 3 && (
-          <Link to={`/pages/${page.id}/delete`}>删除页面</Link>
-        )}
-        {page.role >= 3 && (
-          <Link to={`/pages/${page.id}/move`}>移动与排序</Link>
-        )}
-      </div>
+      <nav className="document-links" aria-label="页面操作">
+        <span className="document-tools-label">页面操作</span>
+        <div className="document-tool-buttons">
+          <Link to={`/pages/${page.id}/permissions`}>
+            <Icon name="shield" />
+            页面权限
+          </Link>
+          <Link to={`/pages/${page.id}/history`}>
+            <Icon name="history" />
+            版本历史
+          </Link>
+          {page.role >= 3 && (
+            <Link to={`/pages/${page.id}/move`}>
+              <Icon name="move" />
+              移动与排序
+            </Link>
+          )}
+          {page.role >= 3 && (
+            <Link
+              className="document-tool-danger"
+              to={`/pages/${page.id}/delete`}
+            >
+              <Icon name="trash" />
+              删除页面
+            </Link>
+          )}
+        </div>
+      </nav>
       <MotionAlert
         visible={!!message}
         type="success"
