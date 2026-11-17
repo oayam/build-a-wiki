@@ -180,7 +180,7 @@ pub async fn append(
         revision_no: n,
     })
 }
-#[utoipa::path(post,path="/api/v1/knowledge-bases/{id}/pages",request_body=CreatePage,responses((status=200,body=Saved),(status=409,body=crate::http::ApiError)))]
+#[utoipa::path(post,operation_id="create_page",path="/api/v1/knowledge-bases/{id}/pages",request_body=CreatePage,responses((status=200,body=Saved),(status=409,body=crate::http::ApiError)))]
 pub async fn create(
     State(s): State<AppState>,
     Extension(id): Extension<RequestId>,

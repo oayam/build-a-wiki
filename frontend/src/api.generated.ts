@@ -173,7 +173,7 @@ export interface paths {
     };
     get: operations["tree"];
     put?: never;
-    post: operations["create"];
+    post: operations["create_page"];
     delete?: never;
     options?: never;
     head?: never;
@@ -922,7 +922,7 @@ export interface operations {
       };
     };
   };
-  create: {
+  create_page: {
     parameters: {
       query?: never;
       header?: never;

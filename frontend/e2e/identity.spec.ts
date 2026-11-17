@@ -64,6 +64,7 @@ test("browser identity → groups → private library → ACL → revoke → ind
   await owner.getByRole("link", { name: "研发知识库" }).click();
   const url = owner.url();
   const kid = url.split("/").pop()!;
+  await owner.getByRole("link",{name:"管理权限与设置"}).click();
   await select(owner, "添加授权对象", "用户：reader");
   await select(owner, "添加授权对象", "组：研发组");
   await select(owner, "角色-研发组", "编辑者");
@@ -72,6 +73,7 @@ test("browser identity → groups → private library → ACL → revoke → ind
   const editor = await editorContext.newPage();
   await login(editor, "editor");
   await editor.getByRole("link", { name: "研发知识库" }).click();
+  await editor.getByRole("link",{name:"管理权限与设置"}).click();
   await expect(editor.getByText(/当前角色：编辑者/)).toBeVisible();
   await expect(
     editor.getByRole("button", { name: "保存权限", exact: true }),
@@ -80,6 +82,7 @@ test("browser identity → groups → private library → ACL → revoke → ind
   const reader = await readerContext.newPage();
   await login(reader, "reader");
   await reader.getByRole("link", { name: "研发知识库" }).click();
+  await reader.getByRole("link",{name:"管理权限与设置"}).click();
   await expect(reader.getByText(/当前角色：查看者/)).toBeVisible();
   // Group revocation must immediately agree across browser, API and SQL.
   await page.getByRole("button", { name: "移除成员", exact: true }).click();

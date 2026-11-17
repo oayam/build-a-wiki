@@ -1,6 +1,12 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, NavLink, Routes, Route } from "react-router-dom";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  NavLink,
+  Routes,
+  Route,
+} from "react-router-dom";
 import {
   QueryClient,
   QueryClientProvider,
@@ -15,6 +21,7 @@ import { zh } from "./locales/zh";
 import "./style.css";
 import { SessionGate, Account, useSession } from "./session";
 import Users from "./Users";
+import { LibraryPages, PageScreen, SharedPages } from "./Pages";
 import { Libraries, PermissionPanel } from "./Knowledge";
 function Status() {
   const q = useQuery({
@@ -124,7 +131,12 @@ function App() {
         <main>
           <Routes>
             <Route path="/" element={<Libraries />} />
-            <Route path="/knowledge-bases/:id" element={<PermissionPanel />} />
+            <Route
+              path="/knowledge-bases/:id/permissions"
+              element={<PermissionPanel />}
+            />
+            <Route path="/pages/:id" element={<PageScreen />} />
+            <Route path="/knowledge-bases/:id" element={<LibraryPages />} />
             <Route
               path="/pages/:id/permissions"
               element={<PermissionPanel page />}
@@ -139,15 +151,7 @@ function App() {
                 )
               }
             />
-            <Route
-              path="/shared"
-              element={
-                <>
-                  <h1>{zh.shared}</h1>
-                  <Empty description="暂未接入共享页面列表" />
-                </>
-              }
-            />
+            <Route path="/shared" element={<SharedPages />} />
             <Route path="/editor" element={<Prototype />} />
             <Route
               path="/status"
@@ -165,6 +169,16 @@ function App() {
     </div>
   );
 }
+const router = createBrowserRouter([
+  {
+    path: "*",
+    element: (
+      <SessionGate>
+        <App />
+      </SessionGate>
+    ),
+  },
+]);
 const client = new QueryClient();
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -179,11 +193,7 @@ createRoot(document.getElementById("root")!).render(
       }}
     >
       <QueryClientProvider client={client}>
-        <BrowserRouter>
-          <SessionGate>
-            <App />
-          </SessionGate>
-        </BrowserRouter>
+        <RouterProvider router={router} />
       </QueryClientProvider>
     </ConfigProvider>
   </React.StrictMode>,

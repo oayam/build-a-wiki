@@ -570,7 +570,7 @@
         "tags": [
           "crate::pages"
         ],
-        "operationId": "create",
+        "operationId": "create_page",
         "parameters": [
           {
             "name": "id",
