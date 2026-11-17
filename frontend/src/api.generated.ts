@@ -260,6 +260,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/pages/{id}/draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["get_draft"];
+    put: operations["put_draft"];
+    post?: never;
+    delete: operations["delete_draft"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/pages/{id}/move": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["move_page"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/pages/{id}/move-preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["preview_move"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/pages/{id}/permissions": {
     parameters: {
       query?: never;
@@ -276,7 +324,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/pages/{id}/revisions": {
+  "/api/v1/pages/{id}/restore-revision": {
     parameters: {
       query?: never;
       header?: never;
@@ -285,7 +333,39 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    post: operations["restore_revision"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/pages/{id}/revisions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["list_revisions"];
+    put?: never;
     post: operations["save"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/pages/{id}/revisions/{revision_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["read_revision"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -300,6 +380,38 @@ export interface paths {
       cookie?: never;
     };
     get: operations["page_subjects"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/pages/{id}/visit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations["record_visit"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/recent-visits": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["recent_visits"];
     put?: never;
     post?: never;
     delete?: never;
@@ -386,6 +498,25 @@ export interface components {
       /** Format: uuid */
       request_id: string;
     };
+    Draft: {
+      /** Format: uuid */
+      base_revision_id: string;
+      body: unknown;
+      /** Format: int32 */
+      schema_version: number;
+      title: string;
+    };
+    DraftInput: components["schemas"]["Content"] & {
+      /** Format: uuid */
+      base_revision_id: string;
+      /** Format: int64 */
+      draft_version: number;
+    };
+    DraftState: {
+      draft?: null | components["schemas"]["Draft"];
+      /** Format: int64 */
+      draft_version: number;
+    };
     Entry: {
       /** Format: uuid */
       group_id?: string | null;
@@ -421,6 +552,21 @@ export interface components {
     Login: {
       password: string;
       username: string;
+    };
+    MoveInput: {
+      /** Format: uuid */
+      parent_id?: string | null;
+      /** Format: int64 */
+      position: number;
+      preview_token?: string | null;
+    };
+    MovePreview: {
+      /** Format: int64 */
+      affected_pages: number;
+      /** Format: int64 */
+      inherited_pages: number;
+      notice: string;
+      preview_token: string;
     };
     Name: {
       name: string;
@@ -495,6 +641,47 @@ export interface components {
       /** Format: int32 */
       role: number;
       source: string;
+    };
+    Restore: {
+      /** Format: uuid */
+      base_revision_id: string;
+      /** Format: uuid */
+      request_id: string;
+      /** Format: uuid */
+      revision_id: string;
+    };
+    Revision: {
+      body: unknown;
+      body_text: string;
+      /** Format: uuid */
+      editor_id: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      restored_from_revision_id?: string | null;
+      /** Format: int64 */
+      revision_no: number;
+      /** Format: int32 */
+      schema_version: number;
+      title: string;
+    };
+    RevisionSummary: {
+      created_at: string;
+      /** Format: uuid */
+      editor_id: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      restored_from_revision_id?: string | null;
+      /** Format: int64 */
+      revision_no: number;
+      summary: string;
+      title: string;
+    };
+    Revisions: {
+      items: components["schemas"]["RevisionSummary"][];
+      /** Format: int64 */
+      next_cursor?: number | null;
     };
     SavePage: components["schemas"]["Content"] & {
       /** Format: uuid */
@@ -1095,6 +1282,149 @@ export interface operations {
       };
     };
   };
+  get_draft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DraftState"];
+        };
+      };
+    };
+  };
+  put_draft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DraftInput"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DraftState"];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
+  delete_draft: {
+    parameters: {
+      query: {
+        draft_version: number;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DraftState"];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
+  move_page: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MoveInput"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MovePreview"];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
+  preview_move: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MoveInput"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MovePreview"];
+        };
+      };
+    };
+  };
   page_permissions: {
     parameters: {
       query?: never;
@@ -1141,6 +1471,63 @@ export interface operations {
       };
     };
   };
+  restore_revision: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Restore"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Saved"];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
+  list_revisions: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: number;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Revisions"];
+        };
+      };
+    };
+  };
   save: {
     parameters: {
       query?: never;
@@ -1174,6 +1561,28 @@ export interface operations {
       };
     };
   };
+  read_revision: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        revision_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Revision"];
+        };
+      };
+    };
+  };
   page_subjects: {
     parameters: {
       query?: never;
@@ -1191,6 +1600,46 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Subject"][];
+        };
+      };
+    };
+  };
+  record_visit: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  recent_visits: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PageLink"][];
         };
       };
     };

@@ -111,6 +111,227 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
         .await
         .unwrap();
     assert_eq!(count, 2);
+    let draft_path = format!("{path}/draft");
+    let mut draft = body("个人草稿");
+    draft["base_revision_id"] = p["revision_id"].clone();
+    draft["draft_version"] = json!(0);
+    assert_eq!(
+        request(&app, "PUT", &draft_path, draft.clone(), &ec, et, O)
+            .await
+            .0,
+        200
+    );
+    assert_eq!(
+        request(&app, "PUT", &draft_path, draft.clone(), &ec, et, O)
+            .await
+            .0,
+        409
+    );
+    let (_, private, _) = request(&app, "GET", &draft_path, json!({}), &c, t, O).await;
+    assert!(private["draft"].is_null());
+    assert_eq!(
+        request(
+            &app,
+            "DELETE",
+            &format!("{draft_path}?draft_version=0"),
+            json!({}),
+            &ec,
+            et,
+            O
+        )
+        .await
+        .0,
+        409
+    );
+    assert_eq!(
+        request(
+            &app,
+            "DELETE",
+            &format!("{draft_path}?draft_version=1"),
+            json!({}),
+            &ec,
+            et,
+            O
+        )
+        .await
+        .0,
+        200
+    );
+    draft["draft_version"] = json!(1);
+    assert_eq!(
+        request(&app, "PUT", &draft_path, draft.clone(), &ec, et, O)
+            .await
+            .0,
+        409
+    );
+    draft["draft_version"] = json!(2);
+    assert_eq!(
+        request(&app, "PUT", &draft_path, draft.clone(), &ec, et, O)
+            .await
+            .0,
+        200
+    );
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM page_revisions WHERE page_id=$1")
+        .bind(Uuid::parse_str(pid).unwrap())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 2);
+    let (_, current, _) = request(&app, "GET", &path, json!({}), &ec, et, O).await;
+    let restore = json!({"request_id":Uuid::new_v4(),"base_revision_id":current["current_revision_id"],"revision_id":p["revision_id"]});
+    let (code, restored, _) = request(
+        &app,
+        "POST",
+        &format!("{path}/restore-revision"),
+        restore.clone(),
+        &ec,
+        et,
+        O,
+    )
+    .await;
+    assert_eq!(code, 200, "{restored}");
+    assert_eq!(restored["revision_no"], 3);
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            &format!("{path}/restore-revision"),
+            restore.clone(),
+            &ec,
+            et,
+            O
+        )
+        .await
+        .1,
+        restored
+    );
+    let mut stale = restore;
+    stale["request_id"] = json!(Uuid::new_v4());
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            &format!("{path}/restore-revision"),
+            stale,
+            &ec,
+            et,
+            O
+        )
+        .await
+        .0,
+        409
+    );
+    let (_, history, _) = request(&app, "GET", &save, json!({}), &ec, et, O).await;
+    assert_eq!(history["items"].as_array().unwrap().len(), 3);
+    let (_, restored_page, _) = request(&app, "GET", &path, json!({}), &ec, et, O).await;
+    assert_eq!(restored_page["title"], "根页面");
+    assert_eq!(
+        request(&app, "PUT", &format!("{path}/visit"), json!({}), &ec, et, O)
+            .await
+            .0,
+        200
+    );
+    assert_eq!(
+        request(&app, "GET", "/api/v1/recent-visits", json!({}), &ec, et, O)
+            .await
+            .1
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    let mut sibling = body("移动目标");
+    sibling["request_id"] = json!(Uuid::new_v4());
+    let (_, sibling, _) = request(&app, "POST", &tree, sibling, &c, t, O).await;
+    let sid = sibling["id"].as_str().unwrap();
+    let spath = format!("/api/v1/pages/{sid}");
+    let mut mv = json!({"parent_id":sid,"position":-10});
+    let mut reverse = json!({"parent_id":pid,"position":0});
+    let (code, prev, _) = request(
+        &app,
+        "POST",
+        &format!("{path}/move-preview"),
+        mv.clone(),
+        &c,
+        t,
+        O,
+    )
+    .await;
+    assert_eq!(code, 200, "{prev}");
+    mv["preview_token"] = prev["preview_token"].clone();
+    let (_, prev, _) = request(
+        &app,
+        "POST",
+        &format!("{spath}/move-preview"),
+        reverse.clone(),
+        &c,
+        t,
+        O,
+    )
+    .await;
+    reverse["preview_token"] = prev["preview_token"].clone();
+    let move_path = format!("{path}/move");
+    let reverse_path = format!("{spath}/move");
+    let (a, b) = tokio::join!(
+        request(&app, "POST", &move_path, mv.clone(), &c, t, O),
+        request(&app, "POST", &reverse_path, reverse, &c, t, O)
+    );
+    assert!(
+        (a.0 == 200 && b.0 != 200) || (a.0 != 200 && b.0 == 200),
+        "{a:?} {b:?}"
+    );
+    // Normalize the structure using fresh previews; a consumed preview cannot be reused.
+    assert_ne!(
+        request(&app, "POST", &format!("{path}/move"), mv, &c, t, O)
+            .await
+            .0,
+        200
+    );
+    for target in [&path, &spath] {
+        let mut v = json!({"parent_id":null,"position":0});
+        let (code, r, _) = request(
+            &app,
+            "POST",
+            &format!("{target}/move-preview"),
+            v.clone(),
+            &c,
+            t,
+            O,
+        )
+        .await;
+        assert_eq!(code, 200, "{r}");
+        v["preview_token"] = r["preview_token"].clone();
+        assert_eq!(
+            request(&app, "POST", &format!("{target}/move"), v, &c, t, O)
+                .await
+                .0,
+            200
+        );
+    }
+    // Maximum-depth target: moving a page beneath level 64 is rejected.
+    let mut deep = sid.to_owned();
+    for _ in 1..64 {
+        let mut v = body("深度边界");
+        v["request_id"] = json!(Uuid::new_v4());
+        v["parent_id"] = json!(deep);
+        let (code, r, _) = request(&app, "POST", &tree, v, &c, t, O).await;
+        assert_eq!(code, 200, "{r}");
+        deep = r["id"].as_str().unwrap().to_owned();
+    }
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            &format!("{path}/move-preview"),
+            json!({"parent_id":deep,"position":0}),
+            &c,
+            t,
+            O
+        )
+        .await
+        .0,
+        422
+    );
     let mut parent = pid.to_owned();
     for n in 0..3 {
         let mut v = body(&format!("层{n}"));
@@ -122,16 +343,89 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
     }
     let page_acl = format!("/api/v1/pages/{parent}/permissions");
     assert_eq!(request(&app,"PUT",&page_acl,json!({"acl_version":1,"acl_mode":"independent","entries":[{"user_id":e["id"],"group_id":null,"role":1}]}),&c,t,O).await.0,200);
-    request(
-        &app,
-        "PUT",
-        &acl,
-        json!({"acl_version":2,"entries":[]}),
-        &c,
-        t,
-        O,
-    )
-    .await;
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            &acl,
+            json!({"acl_version":2,"entries":[{"user_id":e["id"],"group_id":null,"role":3}]}),
+            &c,
+            t,
+            O
+        )
+        .await
+        .0,
+        200
+    );
+    // Managing the parent does not permit moving an independently protected descendant.
+    for action in ["move-preview", "move"] {
+        let (code, r, _) = request(
+            &app,
+            "POST",
+            &format!("{path}/{action}"),
+            json!({"parent_id":null,"position":0}),
+            &ec,
+            et,
+            O,
+        )
+        .await;
+        assert_eq!(code, 403, "{r}");
+        assert!(r.get("affected_pages").is_none());
+    }
+    // Hold the real authorization barrier while a real HTTP save waits for revocation.
+    let mut revoke = pool.begin().await.unwrap();
+    sqlx::query("SELECT id FROM auth_guard WHERE id=1 FOR UPDATE")
+        .execute(&mut *revoke)
+        .await
+        .unwrap();
+    let revoker_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+        .fetch_one(&mut *revoke)
+        .await
+        .unwrap();
+    sqlx::query("DELETE FROM knowledge_base_acl WHERE knowledge_base_id=$1")
+        .bind(Uuid::parse_str(kid).unwrap())
+        .execute(&mut *revoke)
+        .await
+        .unwrap();
+    let mut pending = body("撤权竞态");
+    pending["request_id"] = json!(Uuid::new_v4());
+    pending["base_revision_id"] = restored["revision_id"].clone();
+    let save_app = app.clone();
+    let save_cookie = ec.clone();
+    let save_csrf = et.to_owned();
+    let save_url = save.clone();
+    let waiting = tokio::spawn(async move {
+        request(
+            &save_app,
+            "POST",
+            &save_url,
+            pending,
+            &save_cookie,
+            &save_csrf,
+            O,
+        )
+        .await
+    });
+    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        loop {
+            let blocked: bool = sqlx::query_scalar(
+                "SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid)))",
+            )
+            .bind(revoker_pid)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            if blocked {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    revoke.commit().await.unwrap();
+    assert_eq!(waiting.await.unwrap().0, 404);
+
     assert_eq!(
         request(&app, "GET", &path, json!({}), &ec, et, O).await.0,
         404
@@ -155,11 +449,62 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
         request(&app, "GET", &tree, json!({}), &ec, et, O).await.0,
         404
     );
+    let mut denied = body("unauthorized");
+    denied["request_id"] = json!(Uuid::new_v4());
+    denied["base_revision_id"] = restored["revision_id"].clone();
     assert_eq!(
-        request(&app, "POST", &save, body("unauthorized"), &ec, et, O)
+        request(&app, "POST", &save, denied, &ec, et, O).await.0,
+        404
+    );
+    assert!(
+        request(&app, "GET", "/api/v1/recent-visits", json!({}), &ec, et, O)
+            .await
+            .1
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        request(&app, "GET", &draft_path, json!({}), &ec, et, O)
             .await
             .0,
-        422
+        404
+    );
+    assert_eq!(
+        request(&app, "PUT", &draft_path, draft, &ec, et, O).await.0,
+        404
+    );
+    assert_eq!(
+        request(
+            &app,
+            "DELETE",
+            &format!("{draft_path}?draft_version=3"),
+            json!({}),
+            &ec,
+            et,
+            O
+        )
+        .await
+        .0,
+        404
+    );
+    assert_eq!(
+        request(&app, "GET", &save, json!({}), &ec, et, O).await.0,
+        404
+    );
+    assert_eq!(
+        request(
+            &app,
+            "GET",
+            &format!("{save}/{}", p["revision_id"].as_str().unwrap()),
+            json!({}),
+            &ec,
+            et,
+            O
+        )
+        .await
+        .0,
+        404
     );
     common::cleanup(pool, admin, schema).await;
 }

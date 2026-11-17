@@ -171,6 +171,10 @@ pub fn router(state: AppState) -> Router {
         .merge(crate::admin::routes())
         .merge(crate::knowledge::routes())
         .merge(crate::pages::routes())
+        .merge(crate::drafts::routes())
+        .merge(crate::history::routes())
+        .merge(crate::recent::routes())
+        .merge(crate::moves::routes())
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
         .fallback(not_found)
@@ -186,6 +190,16 @@ pub fn router(state: AppState) -> Router {
         crate::pages::read,
         crate::pages::save,
         crate::pages::shared,
+        crate::drafts::read,
+        crate::drafts::write,
+        crate::drafts::delete,
+        crate::history::list,
+        crate::history::read,
+        crate::history::restore,
+        crate::recent::visit,
+        crate::recent::list,
+        crate::moves::preview,
+        crate::moves::execute,
         live,
         ready,
         crate::auth::login,

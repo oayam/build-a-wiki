@@ -298,6 +298,9 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/v1/knowledge-bases/{id}/pages", get(tree).post(create))
         .route("/api/v1/pages/{id}", get(read))
-        .route("/api/v1/pages/{id}/revisions", post(save))
+        .route(
+            "/api/v1/pages/{id}/revisions",
+            post(save).get(crate::history::list),
+        )
         .route("/api/v1/shared-pages", get(shared))
 }

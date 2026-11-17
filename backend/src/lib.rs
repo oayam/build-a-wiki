@@ -11,8 +11,13 @@ pub async fn pool(url: &str) -> Result<PgPool, sqlx::Error> {
 pub mod admin;
 pub mod auth;
 pub mod body;
+pub mod drafts;
+pub mod history;
 pub mod http;
 pub mod identity;
 pub mod knowledge;
 pub mod pages;
 pub mod permissions;
+pub mod recent;
+
+pub mod moves;

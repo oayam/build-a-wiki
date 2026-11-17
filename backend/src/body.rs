@@ -97,16 +97,15 @@ fn node(v: &Value, depth: usize, text: &mut Vec<String>) -> Result<()> {
                     return Err(invalid());
                 }
             }
-            if let Some(width) = attrs.and_then(|a| a.get("colwidth")) {
-                if !width.is_null()
-                    && !width.as_array().is_some_and(|a| {
-                        a.len() <= 100
-                            && a.iter()
-                                .all(|n| n.as_i64().is_some_and(|n| (1..=10000).contains(&n)))
-                    })
-                {
-                    return Err(invalid());
-                }
+            if let Some(width) = attrs.and_then(|a| a.get("colwidth"))
+                && !width.is_null()
+                && !width.as_array().is_some_and(|a| {
+                    a.len() <= 100
+                        && a.iter()
+                            .all(|n| n.as_i64().is_some_and(|n| (1..=10000).contains(&n)))
+                })
+            {
+                return Err(invalid());
             }
             if attrs.and_then(|a| a.get("align")).is_some_and(|a| {
                 !a.is_null() && !matches!(a.as_str(), Some("left" | "right" | "center"))
@@ -138,10 +137,11 @@ fn node(v: &Value, depth: usize, text: &mut Vec<String>) -> Result<()> {
                     return Err(invalid());
                 }
                 for key in ["target", "rel", "class", "title"] {
-                    if let Some(value) = a.get(key) {
-                        if !value.is_null() && !value.is_string() {
-                            return Err(invalid());
-                        }
+                    if let Some(value) = a.get(key)
+                        && !value.is_null()
+                        && !value.is_string()
+                    {
+                        return Err(invalid());
                     }
                 }
                 if a.get("target").is_some_and(|s| {
