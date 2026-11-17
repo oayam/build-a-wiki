@@ -7,6 +7,7 @@ import type { components } from "./api.generated";
 import { Account, request, useSession } from "./session";
 import { PageTree } from "./Pages";
 import Icon, { type IconName } from "./Icon";
+import CreatePageDialog, { type CreatePageTarget } from "./CreatePageDialog";
 type K = components["schemas"]["KnowledgeBase"];
 export default function Workspace({ children }: { children: React.ReactNode }) {
   const { user } = useSession();
@@ -14,6 +15,7 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const client = useQueryClient();
   const [collapsed, setCollapsed] = React.useState(false);
+  const [createTarget, setCreateTarget] = React.useState<CreatePageTarget>();
   const [query, setQuery] = React.useState("");
   const [more, setMore] = React.useState<K[]>([]);
   const [next, setNext] = React.useState<string | null>();
@@ -208,12 +210,24 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
                   >
                     <Icon name="folder" /> <span>{k.name}</span>
                   </Link>
+                  <button
+                    className="tree-create"
+                    aria-label={`创建页面：${k.name}`}
+                    title={
+                      k.role >= 2 ? "创建页面" : "需要编辑权限才能创建页面"
+                    }
+                    disabled={k.role < 2}
+                    onClick={() => setCreateTarget({ kb: k.id, title: k.name })}
+                  >
+                    <Icon name="plus" />
+                  </button>
                 </div>
                 {open.includes(k.id) && (
                   <PageTree
                     key={`${k.id}:${location.pathname}`}
                     kb={k.id}
                     navigation
+                    onCreate={setCreateTarget}
                     ancestors={page.data?.breadcrumbs.map((p) => p.id)}
                   />
                 )}
@@ -260,6 +274,12 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
           </footer>
         </div>
       </aside>
+      {createTarget && (
+        <CreatePageDialog
+          target={createTarget}
+          onClose={() => setCreateTarget(undefined)}
+        />
+      )}
       <div className="content">
         <nav className="workspace-crumb" aria-label="页面路径">
           <Link to="/" aria-label="返回工作台">

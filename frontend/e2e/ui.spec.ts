@@ -160,6 +160,15 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
   await page.getByRole("button", { name: /取\s*消/, exact: true }).click();
   await page.getByRole("button", { name: /预\s*览/, exact: true }).click();
   await expect(page.getByRole("toolbar", { name: "正文格式" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "文档预览" })).toHaveCSS(
+    "border-top-width",
+    "0px",
+  );
+  await expect(page.getByRole("region", { name: "文档预览" })).toHaveCSS(
+    "box-shadow",
+    "none",
+  );
+  await expect(page.getByLabel("页面标题", { exact: true })).toHaveCount(0);
   await expect(page.locator(".tiptap")).toHaveAttribute(
     "contenteditable",
     "false",
@@ -175,6 +184,17 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
   await page.keyboard.type("UI format verification");
   await page.getByRole("button", { name: "保存共享版本" }).click();
   await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
+  await expect(page.getByText("共享版本已保存", { exact: true })).toHaveCount(
+    0,
+    { timeout: 6500 },
+  );
+  await page.getByRole("button", { name: "编辑页面", exact: true }).click();
+  await page.getByRole("button", { name: "保存共享版本", exact: true }).click();
+  await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "关闭保存提示", exact: true }).click();
+  await expect(page.getByText("共享版本已保存", { exact: true })).toHaveCount(
+    0,
+  );
   await page.reload();
   await expect(
     page
@@ -201,4 +221,66 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
   ).toBeVisible();
   await page.goto(`/pages/${ids.page}`);
   await page.getByRole("button", { name: "编辑页面", exact: true }).click();
+  await expect(page.getByRole("main").getByLabel("子页面标题")).toHaveCount(0);
+  await sidebar
+    .getByRole("button", {
+      name: "创建子页面：Build-a-Wiki 使用指南",
+      exact: true,
+    })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "创建子页面", exact: true });
+  await dialog.getByRole("button", { name: "确认创建", exact: true }).click();
+  await expect(
+    dialog.getByText("请输入 1～200 个字符的页面标题"),
+  ).toBeVisible();
+  await dialog
+    .getByLabel("新建页面标题", { exact: true })
+    .fill("目录创建的子页面");
+  await dialog.getByRole("button", { name: "确认创建", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "目录创建的子页面", exact: true }),
+  ).toBeVisible();
+  const childId = page.url().split("/").pop();
+  const child = await (
+    await page.request.get(`/api/v1/pages/${childId}`)
+  ).json();
+  expect(child.parent_id).toBe(ids.page);
+  await expect(
+    sidebar.getByRole("link", {
+      name: "打开页面：目录创建的子页面",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-current", "page");
+  await sidebar
+    .getByRole("button", { name: "创建子页面：目录创建的子页面", exact: true })
+    .click();
+  await dialog.getByLabel("新建页面标题", { exact: true }).fill("下一层子页面");
+  await dialog.getByRole("button", { name: "确认创建", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "下一层子页面", exact: true }),
+  ).toBeVisible();
+  const grandchild = await (
+    await page.request.get(`/api/v1/pages/${page.url().split("/").pop()}`)
+  ).json();
+  expect(grandchild.parent_id).toBe(childId);
+  await sidebar
+    .getByRole("button", { name: "创建页面：产品协作知识库", exact: true })
+    .click();
+  const rootDialog = page.getByRole("dialog", {
+    name: "创建页面",
+    exact: true,
+  });
+  await rootDialog
+    .getByLabel("新建页面标题", { exact: true })
+    .fill("目录创建的顶层页面");
+  await rootDialog
+    .getByRole("button", { name: "确认创建", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "目录创建的顶层页面", exact: true }),
+  ).toBeVisible();
+  const rootPage = await (
+    await page.request.get(`/api/v1/pages/${page.url().split("/").pop()}`)
+  ).json();
+  expect(rootPage.parent_id).toBeNull();
 });

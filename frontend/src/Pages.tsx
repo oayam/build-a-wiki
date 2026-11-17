@@ -2,6 +2,7 @@ import Attachments from "./Attachments";
 import React from "react";
 import Icon from "./Icon";
 import EditorToolbar from "./EditorToolbar";
+import type { CreatePageTarget } from "./CreatePageDialog";
 import { Alert, Button, Input, Form, Space, Spin, Empty } from "antd";
 import {
   Link,
@@ -25,11 +26,13 @@ export function PageTree({
   parent,
   navigation = false,
   ancestors = [],
+  onCreate,
 }: {
   kb: string;
   parent?: string;
   navigation?: boolean;
   ancestors?: string[];
+  onCreate?: (target: CreatePageTarget) => void;
 }) {
   const [items, setItems] = React.useState<Summary[]>([]);
   const [cursor, setCursor] = React.useState<string | null>(null);
@@ -96,6 +99,19 @@ export function PageTree({
                 <Icon name={p.has_children ? "folder" : "file"} />
                 <span>{p.title}</span>
               </NavLink>
+              {navigation && onCreate && (
+                <button
+                  className="tree-create"
+                  aria-label={`创建子页面：${p.title}`}
+                  title={
+                    p.role >= 2 ? "创建子页面" : "需要编辑权限才能创建子页面"
+                  }
+                  disabled={p.role < 2}
+                  onClick={() => onCreate({ kb, parent: p.id, title: p.title })}
+                >
+                  <Icon name="plus" />
+                </button>
+              )}
             </div>
             {p.has_children && open.includes(p.id) && (
               <PageTree
@@ -103,6 +119,7 @@ export function PageTree({
                 parent={p.id}
                 navigation={navigation}
                 ancestors={ancestors}
+                onCreate={onCreate}
               />
             )}
           </li>
@@ -230,7 +247,6 @@ function Document({
   onSaved: (d: Detail) => void;
 }) {
   const { user } = useSession();
-  const navigate = useNavigate();
   const [editing, setEditing] = React.useState(false);
   const [title, setTitle] = React.useState(page.title);
   const [body, setBody] = React.useState<JSONContent>(page.body as JSONContent);
@@ -239,6 +255,11 @@ function Document({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [message, setMessage] = React.useState("");
+  React.useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(() => setMessage(""), 5000);
+    return () => window.clearTimeout(timer);
+  }, [message]);
   const [preview, setPreview] = React.useState(false);
   const [latest, setLatest] = React.useState<Detail>();
   const retry = React.useRef<{ fingerprint: string; id: string } | undefined>(
@@ -339,7 +360,7 @@ function Document({
     <>
       <div className="document-header">
         <div className="document-heading">
-          {editing ? (
+          {editing && !preview ? (
             <Input
               className="document-title"
               aria-label="页面标题"
@@ -412,7 +433,22 @@ function Document({
           <Link to={`/pages/${page.id}/move`}>移动与排序</Link>
         )}
       </div>
-      {message && <Alert type="success" message={message} />}
+      {message && (
+        <Alert
+          type="success"
+          message={message}
+          action={
+            <Button
+              type="text"
+              size="small"
+              aria-label="关闭保存提示"
+              onClick={() => setMessage("")}
+            >
+              ×
+            </Button>
+          }
+        />
+      )}
       {error && (
         <Alert
           type="error"
@@ -467,7 +503,7 @@ function Document({
         />
       )}
       <section
-        className={`document-canvas ${editing ? "editing" : "reading"}`}
+        className={`document-canvas ${preview ? "preview" : editing ? "editing" : "reading"}`}
         aria-label={preview ? "文档预览" : "文档正文"}
       >
         {editing && !preview && <EditorToolbar editor={editor} />}
@@ -521,35 +557,6 @@ function Document({
             以最新版本为基准继续编辑
           </Button>
         </section>
-      )}
-      {page.role >= 2 && (
-        <Form
-          layout="inline"
-          style={{ marginTop: 24 }}
-          onFinish={async (v) => {
-            try {
-              const p = await request<components["schemas"]["Saved"]>(
-                `/knowledge-bases/${page.knowledge_base_id}/pages`,
-                "POST",
-                {
-                  request_id: crypto.randomUUID(),
-                  parent_id: page.id,
-                  title: v.title,
-                  schema_version: 1,
-                  body: emptyBody,
-                },
-              );
-              navigate(`/pages/${p.id}`);
-            } catch (e) {
-              setError((e as Error).message);
-            }
-          }}
-        >
-          <Form.Item name="title" rules={[{ required: true, max: 200 }]}>
-            <Input aria-label="子页面标题" placeholder="子页面标题" />
-          </Form.Item>
-          <Button htmlType="submit">创建子页面</Button>
-        </Form>
       )}
       <Attachments
         page={page.id}

@@ -84,6 +84,8 @@ test("browser identity → groups → private library → ACL → revoke → ind
   await reader.getByRole("link", { name: "研发知识库", exact: true }).click();
   await reader.getByRole("link",{name:"管理权限与设置"}).click();
   await expect(reader.getByText(/当前角色：查看者/)).toBeVisible();
+  await expect(reader.getByRole("button", { name: "创建页面：研发知识库", exact: true })).toBeDisabled();
+  await expect(editor.getByRole("button", { name: "创建页面：研发知识库", exact: true })).toBeEnabled();
   // Group revocation must immediately agree across browser, API and SQL.
   await page.getByRole("button", { name: "移除成员", exact: true }).click();
   await page.getByRole("button", { name: /确\s*定/ }).click();

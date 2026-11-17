@@ -1004,3 +1004,39 @@ summary:focus-visible {
     white-space: nowrap;
   }
 }
+.document-canvas.preview,
+.document-canvas.reading {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.tree-create {
+  display: grid;
+  place-items: center;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 28px;
+  margin-left: 3px;
+  padding: 4px;
+  color: #5484d4;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.tree-create svg {
+  width: 16px;
+  height: 16px;
+}
+.tree-create:hover:not(:disabled) {
+  background: #dce9ff;
+  color: #165cda;
+}
+.tree-create:disabled {
+  color: #b5c1d4;
+  cursor: not-allowed;
+}
+.create-page-location {
+  color: #788ba9;
+  overflow-wrap: anywhere;
+}
