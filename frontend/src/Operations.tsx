@@ -1,7 +1,42 @@
 import React from "react";
+import Icon from "./Icon";
 import { Alert, Button, Input, Space, Table } from "antd";
 import { request } from "./session";
 import type { components } from "./api.generated";
+const STATUS_TEXT = {
+  SUMMARY: "系统运行概览",
+  MAINTENANCE: "维护模式",
+  MAINTENANCE_ON: "已开启",
+  MAINTENANCE_OFF: "已关闭",
+  PENDING: "待处理任务",
+  RETRY: "待重试任务",
+  STORAGE: "附件可用空间",
+  TASK_UNIT: "项",
+  UNKNOWN: "暂不可用",
+  DISK_WARNING: "附件磁盘空间不足 1 GiB 或无法读取，请检查存储。",
+} as const;
+const STATUS_ICONS = {
+  MAINTENANCE: "settings",
+  PENDING: "history",
+  RETRY: "undo",
+  STORAGE: "folder",
+} as const;
+const BYTES_PER_MIB = 1024 ** 2;
+const BYTES_PER_GIB = 1024 ** 3;
+const STORAGE_UNITS = { MIB: "MiB", GIB: "GiB" } as const;
+const STORAGE_FORMAT = new Intl.NumberFormat("zh-CN", {
+  maximumFractionDigits: 1,
+});
+const COUNT_FORMAT = new Intl.NumberFormat("zh-CN");
+const EMPTY_COUNT = 0;
+function storageValue(bytes: number | null | undefined) {
+  if (bytes == null) return { value: STATUS_TEXT.UNKNOWN, unit: "" };
+  const gib = bytes >= BYTES_PER_GIB;
+  return {
+    value: STORAGE_FORMAT.format(bytes / (gib ? BYTES_PER_GIB : BYTES_PER_MIB)),
+    unit: gib ? STORAGE_UNITS.GIB : STORAGE_UNITS.MIB,
+  };
+}
 export default function Operations() {
   const [status, setStatus] =
     React.useState<components["schemas"]["SystemStatus"]>();
@@ -34,6 +69,7 @@ export default function Operations() {
   React.useEffect(() => {
     void load();
   }, []);
+  const storage = storageValue(status?.disk_available_bytes);
   return (
     <>
       <h1>审计与系统状态</h1>
@@ -41,20 +77,77 @@ export default function Operations() {
       <Button onClick={() => void load()}>刷新状态</Button>
       {status && (
         <>
-          <p>
-            维护模式：{status.maintenance ? "开启" : "关闭"}；待处理任务：
-            {status.pending_jobs}；待重试：{status.failed_jobs}
-            ；附件盘可用空间：
-            {status.disk_available_bytes === null
-              ? "未知"
-              : Math.floor((status.disk_available_bytes ?? 0) / 1024 / 1024) +
-                " MiB"}
-          </p>
+          <section
+            aria-label={STATUS_TEXT.SUMMARY}
+            className="system-status-summary"
+          >
+            <dl className="system-status-grid">
+              <div
+                className={`system-status-card ${status.maintenance ? "is-warning" : "is-normal"}`}
+              >
+                <dt>
+                  <span className="system-status-icon">
+                    <Icon name={STATUS_ICONS.MAINTENANCE} />
+                  </span>
+                  {STATUS_TEXT.MAINTENANCE}
+                </dt>
+                <dd>
+                  <span className="system-status-badge">
+                    <span aria-hidden="true" className="system-status-dot" />
+                    {status.maintenance
+                      ? STATUS_TEXT.MAINTENANCE_ON
+                      : STATUS_TEXT.MAINTENANCE_OFF}
+                  </span>
+                </dd>
+              </div>
+              <div className="system-status-card">
+                <dt>
+                  <span className="system-status-icon">
+                    <Icon name={STATUS_ICONS.PENDING} />
+                  </span>
+                  {STATUS_TEXT.PENDING}
+                </dt>
+                <dd>
+                  {COUNT_FORMAT.format(status.pending_jobs)}
+                  <span className="system-status-unit">
+                    {STATUS_TEXT.TASK_UNIT}
+                  </span>
+                </dd>
+              </div>
+              <div
+                className={`system-status-card ${status.failed_jobs > EMPTY_COUNT ? "is-warning" : ""}`}
+              >
+                <dt>
+                  <span className="system-status-icon">
+                    <Icon name={STATUS_ICONS.RETRY} />
+                  </span>
+                  {STATUS_TEXT.RETRY}
+                </dt>
+                <dd>
+                  {COUNT_FORMAT.format(status.failed_jobs)}
+                  <span className="system-status-unit">
+                    {STATUS_TEXT.TASK_UNIT}
+                  </span>
+                </dd>
+              </div>
+              <div
+                className={`system-status-card ${status.disk_warning ? "is-warning" : ""}`}
+              >
+                <dt>
+                  <span className="system-status-icon">
+                    <Icon name={STATUS_ICONS.STORAGE} />
+                  </span>
+                  {STATUS_TEXT.STORAGE}
+                </dt>
+                <dd>
+                  {storage.value}
+                  <span className="system-status-unit">{storage.unit}</span>
+                </dd>
+              </div>
+            </dl>
+          </section>
           {status.disk_warning && (
-            <Alert
-              type="warning"
-              message="附件磁盘空间不足1GiB或无法读取，请检查存储。"
-            />
+            <Alert type="warning" message={STATUS_TEXT.DISK_WARNING} />
           )}
           <Table
             rowKey="id"

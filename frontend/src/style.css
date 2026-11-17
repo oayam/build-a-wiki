@@ -1383,3 +1383,115 @@ summary:focus-visible {
 .settings-heading .ant-btn {
   flex-shrink: 0;
 }
+
+.system-status-summary {
+  --status-ink: #294669;
+  --status-muted: #6d809c;
+  --status-blue: #4f7fc6;
+  --status-tint: #edf4ff;
+  --status-border: #e0e9f5;
+  --status-warning: #a96915;
+  --status-warning-tint: #fff5df;
+  --status-normal: #26806a;
+  --status-normal-tint: #eaf7f1;
+  margin: 20px 0 24px;
+}
+.system-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+.system-status-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--status-border);
+  border-radius: 12px;
+  background: linear-gradient(145deg, #fff, #f8fbff);
+}
+.system-status-card dt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--status-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.system-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  height: 30px;
+  color: var(--status-blue);
+  background: var(--status-tint);
+  border-radius: 8px;
+}
+.system-status-icon svg {
+  width: 17px;
+  height: 17px;
+}
+.system-status-card dd {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 16px 0 0;
+  min-height: 38px;
+  color: var(--status-ink);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 38px;
+  font-variant-numeric: tabular-nums;
+}
+.system-status-unit {
+  color: var(--status-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+.system-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+}
+.system-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.system-status-card.is-normal .system-status-badge {
+  color: var(--status-normal);
+}
+.system-status-card.is-normal .system-status-icon {
+  color: var(--status-normal);
+  background: var(--status-normal-tint);
+}
+.system-status-card.is-warning dd {
+  color: var(--status-warning);
+}
+.system-status-card.is-warning .system-status-icon {
+  color: var(--status-warning);
+  background: var(--status-warning-tint);
+}
+@media (max-width: 1100px) {
+  .system-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .system-status-grid {
+    gap: 10px;
+  }
+  .system-status-card {
+    padding: 12px;
+  }
+  .system-status-card dt {
+    gap: 6px;
+    font-size: 12px;
+  }
+  .system-status-card dd {
+    font-size: 24px;
+  }
+}
