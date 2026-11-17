@@ -188,8 +188,9 @@ kbd {
   align-items: center;
   justify-content: space-between;
   margin: 8px 13px 12px;
-  font-size: 12px;
-  color: #8291a7;
+  font-size: 15px;
+  font-weight: 600;
+  color: #526b91;
 }
 .sidebar-section-label a {
   display: grid;
