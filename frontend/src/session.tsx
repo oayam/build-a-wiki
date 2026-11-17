@@ -131,3 +131,34 @@ export function Account() {
     </Space>
   );
 }
+
+export function uploadFile(
+  path: string,
+  file: File,
+  progress: (n: number) => void,
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/v1" + path);
+    xhr.setRequestHeader("X-CSRF-Token", csrf);
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) progress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onerror = () => reject(new Error("上传中断，请重试"));
+    xhr.timeout = 130000;
+    xhr.ontimeout = () => reject(new Error("上传超时，请重试"));
+    xhr.onload = () => {
+      let data;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        reject(new Error("上传响应无效"));
+        return;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error(data.message ?? "上传失败"));
+    };
+    xhr.send(file);
+  });
+}

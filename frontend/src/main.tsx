@@ -1,3 +1,6 @@
+import Search from "./Search";
+import Operations from "./Operations";
+import Trash, { DeletePage } from "./Trash";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -117,6 +120,11 @@ function App() {
           <NavLink to="/" end>
             {zh.home}
           </NavLink>
+          <NavLink to="/search">搜索</NavLink>
+          {user.is_system_admin && (
+            <NavLink to="/admin/operations">审计与系统状态</NavLink>
+          )}
+          <NavLink to="/trash">回收站</NavLink>
           <NavLink to="/shared">{zh.shared}</NavLink>
           <NavLink to="/editor">{zh.editor}</NavLink>
           <NavLink to="/status">{zh.status}</NavLink>
@@ -146,6 +154,19 @@ function App() {
               path="/knowledge-bases/:id/permissions"
               element={<PermissionPanel />}
             />
+            <Route path="/search" element={<Search />} />
+            <Route
+              path="/admin/operations"
+              element={
+                user.is_system_admin ? (
+                  <Operations />
+                ) : (
+                  <Alert type="error" message="没有管理权限" />
+                )
+              }
+            />
+            <Route path="/trash" element={<Trash />} />
+            <Route path="/pages/:id/delete" element={<DeletePage />} />
             <Route path="/pages/:id/move" element={<Move />} />
             <Route path="/pages/:id/history" element={<History />} />
             <Route path="/pages/:id" element={<PageScreen />} />

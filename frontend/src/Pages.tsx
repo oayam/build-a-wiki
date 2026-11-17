@@ -1,3 +1,4 @@
+import Attachments from "./Attachments";
 import React from "react";
 import { Alert, Button, Input, Form, Space, Spin, Empty } from "antd";
 import { Link, useParams, useNavigate, useBlocker } from "react-router-dom";
@@ -306,6 +307,9 @@ function Document({
         <Link to={`/pages/${page.id}/permissions`}>页面权限</Link>
         <Link to={`/pages/${page.id}/history`}>版本历史</Link>
         {page.role >= 3 && (
+          <Link to={`/pages/${page.id}/delete`}>删除页面</Link>
+        )}
+        {page.role >= 3 && (
           <Link to={`/pages/${page.id}/move`}>移动与排序</Link>
         )}
         {page.role >= 2 && !editing && (
@@ -518,6 +522,12 @@ function Document({
           <Button htmlType="submit">创建子页面</Button>
         </Form>
       )}
+      <Attachments
+        page={page.id}
+        editor={editor}
+        editing={editing}
+        canEdit={page.role >= 2}
+      />
       <h2>子页面</h2>
       <PageTree kb={page.knowledge_base_id} parent={page.id} />
     </>
