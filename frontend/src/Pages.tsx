@@ -28,6 +28,16 @@ import { useDraft } from "./useDraft";
 type Detail = components["schemas"]["PageDetail"];
 type List = components["schemas"]["PageList"];
 type Summary = components["schemas"]["PageSummary"];
+const EMPTY_DOCUMENT_MESSAGE = "空空如也";
+const DOCUMENT_PANEL_LABEL = "页面内容";
+const VISIBLE_BLOCK_TYPES = new Set(["image", "horizontalRule", "table"]);
+function hasVisibleBody(node: JSONContent): boolean {
+  return (
+    Boolean(node.text?.trim()) ||
+    VISIBLE_BLOCK_TYPES.has(node.type ?? "") ||
+    Boolean(node.content?.some(hasVisibleBody))
+  );
+}
 const emptyBody = { type: "doc", content: [{ type: "paragraph" }] };
 export function PageTree({
   kb,
@@ -406,204 +416,223 @@ function Document({
   }
   return (
     <>
-      <div className="document-header">
-        <div className="document-heading">
-          <div
-            className="document-title-slot"
-            key={editing && !preview ? "edit" : "read"}
-          >
-            {editing && !preview ? (
-              <Input
-                className="document-title"
-                aria-label="页面标题"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  setDirty(true);
-                }}
-              />
-            ) : (
-              <h1>{title}</h1>
-            )}
-          </div>
-          <span className={`document-badge ${editing ? "is-draft" : ""}`}>
-            {editing ? (preview ? "预览" : "草稿") : "已发布"}
-          </span>
-        </div>
-        <Space wrap className="document-actions">
-          {page.role >= 2 && !editing && (
-            <Button
-              type="primary"
-              disabled={!draft.ready || !!draft.candidate}
-              onClick={() => setEditing(true)}
+      <section className="document-panel" aria-label={DOCUMENT_PANEL_LABEL}>
+        <div className="document-header">
+          <div className="document-heading">
+            <div
+              className="document-title-slot"
+              key={editing && !preview ? "edit" : "read"}
             >
-              编辑页面
-            </Button>
-          )}
-          {editing && (
-            <>
-              <Button type="primary" loading={busy} onClick={() => void save()}>
-                保存共享版本
-              </Button>
-              <Button onClick={() => setPreview(!preview)}>
-                {preview ? "继续编辑" : "预览"}
-              </Button>
+              {editing && !preview ? (
+                <Input
+                  className="document-title"
+                  aria-label="页面标题"
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    setDirty(true);
+                  }}
+                />
+              ) : (
+                <h1>{title}</h1>
+              )}
+            </div>
+            <span className={`document-badge ${editing ? "is-draft" : ""}`}>
+              {editing ? (preview ? "预览" : "草稿") : "已发布"}
+            </span>
+          </div>
+          <Space wrap className="document-actions">
+            {page.role >= 2 && !editing && (
               <Button
-                onClick={async () => {
-                  if (!dirty || confirm("放弃未保存内容和个人草稿？")) {
-                    try {
-                      await draft.discard();
-                    } catch (e) {
-                      setError((e as Error).message);
-                      return;
+                type="primary"
+                disabled={!draft.ready || !!draft.candidate}
+                onClick={() => setEditing(true)}
+              >
+                编辑页面
+              </Button>
+            )}
+            {editing && (
+              <>
+                <Button
+                  type="primary"
+                  loading={busy}
+                  onClick={() => void save()}
+                >
+                  保存共享版本
+                </Button>
+                <Button onClick={() => setPreview(!preview)}>
+                  {preview ? "继续编辑" : "预览"}
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!dirty || confirm("放弃未保存内容和个人草稿？")) {
+                      try {
+                        await draft.discard();
+                      } catch (e) {
+                        setError((e as Error).message);
+                        return;
+                      }
+                      setBase(page.current_revision_id);
+                      setTitle(page.title);
+                      setBody(page.body as JSONContent);
+                      editor?.commands.setContent(page.body as JSONContent, {
+                        emitUpdate: false,
+                      });
+                      setDirty(false);
+                      setEditing(false);
+                      sessionStorage.removeItem(localKey);
                     }
-                    setBase(page.current_revision_id);
-                    setTitle(page.title);
-                    setBody(page.body as JSONContent);
-                    editor?.commands.setContent(page.body as JSONContent, {
+                  }}
+                >
+                  放弃编辑
+                </Button>
+              </>
+            )}
+            <Dropdown
+              trigger={["click"]}
+              placement="bottomRight"
+              autoFocus
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              overlayClassName="document-settings-dropdown"
+              menu={{
+                "aria-label": "页面设置",
+                onClick: () => setSettingsOpen(false),
+                items: [
+                  {
+                    key: "permissions",
+                    icon: <Icon name="shield" />,
+                    label: (
+                      <Link to={`/pages/${page.id}/permissions`}>页面权限</Link>
+                    ),
+                  },
+                  {
+                    key: "history",
+                    icon: <Icon name="history" />,
+                    label: (
+                      <Link to={`/pages/${page.id}/history`}>版本历史</Link>
+                    ),
+                  },
+                  ...(page.role >= 3
+                    ? [
+                        {
+                          key: "move",
+                          icon: <Icon name="move" />,
+                          label: (
+                            <Link to={`/pages/${page.id}/move`}>
+                              移动与排序
+                            </Link>
+                          ),
+                        },
+                        { type: "divider" as const },
+                        {
+                          key: "delete",
+                          danger: true,
+                          icon: <Icon name="trash" />,
+                          label: (
+                            <Link to={`/pages/${page.id}/delete`}>
+                              删除页面
+                            </Link>
+                          ),
+                        },
+                      ]
+                    : []),
+                ],
+              }}
+            >
+              <Button
+                className="document-settings-trigger"
+                aria-label="页面设置"
+                title="页面设置"
+                aria-haspopup="menu"
+                aria-expanded={settingsOpen}
+                icon={<Icon name="settings" />}
+              />
+            </Dropdown>
+          </Space>
+        </div>
+        <MotionAlert
+          visible={!!message}
+          type="success"
+          message={message}
+          action={
+            <Button
+              type="text"
+              size="small"
+              aria-label="关闭保存提示"
+              onClick={() => setMessage("")}
+            >
+              ×
+            </Button>
+          }
+        />
+        <MotionAlert
+          visible={!!error}
+          type="error"
+          message={error}
+          description="本地内容不会被其他成员的版本覆盖。"
+          action={
+            <Button
+              onClick={() =>
+                void request<Detail>(`/pages/${page.id}`)
+                  .then(setLatest)
+                  .catch((e) => setError(e.message))
+              }
+            >
+              查看最新版本
+            </Button>
+          }
+        />
+        <MotionAlert
+          visible={!!draft.candidate}
+          type="info"
+          message="发现未共享的个人草稿"
+          action={
+            <Space>
+              <Button
+                onClick={() => {
+                  const v = draft.restore();
+                  if (v) {
+                    setTitle(v.title);
+                    setBody(v.body as JSONContent);
+                    setBase(v.base_revision_id);
+                    editor?.commands.setContent(v.body as JSONContent, {
                       emitUpdate: false,
                     });
-                    setDirty(false);
-                    setEditing(false);
-                    sessionStorage.removeItem(localKey);
+                    setEditing(true);
+                    setDirty(true);
                   }
                 }}
               >
-                放弃编辑
+                恢复个人草稿
               </Button>
-            </>
-          )}
-          <Dropdown
-            trigger={["click"]}
-            placement="bottomRight"
-            autoFocus
-            open={settingsOpen}
-            onOpenChange={setSettingsOpen}
-            overlayClassName="document-settings-dropdown"
-            menu={{
-              "aria-label": "页面设置",
-              onClick: () => setSettingsOpen(false),
-              items: [
-                {
-                  key: "permissions",
-                  icon: <Icon name="shield" />,
-                  label: (
-                    <Link to={`/pages/${page.id}/permissions`}>页面权限</Link>
-                  ),
-                },
-                {
-                  key: "history",
-                  icon: <Icon name="history" />,
-                  label: <Link to={`/pages/${page.id}/history`}>版本历史</Link>,
-                },
-                ...(page.role >= 3
-                  ? [
-                      {
-                        key: "move",
-                        icon: <Icon name="move" />,
-                        label: (
-                          <Link to={`/pages/${page.id}/move`}>移动与排序</Link>
-                        ),
-                      },
-                      { type: "divider" as const },
-                      {
-                        key: "delete",
-                        danger: true,
-                        icon: <Icon name="trash" />,
-                        label: (
-                          <Link to={`/pages/${page.id}/delete`}>删除页面</Link>
-                        ),
-                      },
-                    ]
-                  : []),
-              ],
-            }}
-          >
-            <Button
-              className="document-settings-trigger"
-              aria-label="页面设置"
-              title="页面设置"
-              aria-haspopup="menu"
-              aria-expanded={settingsOpen}
-              icon={<Icon name="settings" />}
-            />
-          </Dropdown>
-        </Space>
-      </div>
-      <MotionAlert
-        visible={!!message}
-        type="success"
-        message={message}
-        action={
-          <Button
-            type="text"
-            size="small"
-            aria-label="关闭保存提示"
-            onClick={() => setMessage("")}
-          >
-            ×
-          </Button>
-        }
-      />
-      <MotionAlert
-        visible={!!error}
-        type="error"
-        message={error}
-        description="本地内容不会被其他成员的版本覆盖。"
-        action={
-          <Button
-            onClick={() =>
-              void request<Detail>(`/pages/${page.id}`)
-                .then(setLatest)
-                .catch((e) => setError(e.message))
-            }
-          >
-            查看最新版本
-          </Button>
-        }
-      />
-      <MotionAlert
-        visible={!!draft.candidate}
-        type="info"
-        message="发现未共享的个人草稿"
-        action={
-          <Space>
-            <Button
-              onClick={() => {
-                const v = draft.restore();
-                if (v) {
-                  setTitle(v.title);
-                  setBody(v.body as JSONContent);
-                  setBase(v.base_revision_id);
-                  editor?.commands.setContent(v.body as JSONContent, {
-                    emitUpdate: false,
-                  });
-                  setEditing(true);
-                  setDirty(true);
-                }
-              }}
-            >
-              恢复个人草稿
-            </Button>
-            <Button
-              onClick={() => {
-                if (confirm("永久丢弃个人草稿？"))
-                  void draft.discard().catch((e) => setError(e.message));
-              }}
-            >
-              放弃个人草稿
-            </Button>
-          </Space>
-        }
-      />
-      <section
-        className={`document-canvas ${preview ? "preview" : editing ? "editing" : "reading"}`}
-        aria-label={preview ? "文档预览" : "文档正文"}
-      >
-        <Collapse open={editing && !preview} className="toolbar-motion">
-          <EditorToolbar editor={editor} />
-        </Collapse>
-        <EditorContent editor={editor} />
+              <Button
+                onClick={() => {
+                  if (confirm("永久丢弃个人草稿？"))
+                    void draft.discard().catch((e) => setError(e.message));
+                }}
+              >
+                放弃个人草稿
+              </Button>
+            </Space>
+          }
+        />
+        <section
+          className={`document-canvas ${preview ? "preview" : editing ? "editing" : "reading"}`}
+          aria-label={preview ? "文档预览" : "文档正文"}
+        >
+          <Collapse open={editing && !preview} className="toolbar-motion">
+            <EditorToolbar editor={editor} />
+          </Collapse>
+          <div className="document-body">
+            <EditorContent editor={editor} />
+            {!hasVisibleBody(body) && (
+              <span className="document-empty-hint">
+                {EMPTY_DOCUMENT_MESSAGE}
+              </span>
+            )}
+          </div>
+        </section>
       </section>
       {editing && (
         <>

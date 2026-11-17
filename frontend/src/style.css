@@ -1554,3 +1554,53 @@ summary:focus-visible {
 .sidebar-resizing .sidebar-resizer::after {
   background: var(--sidebar-resizer-active-color);
 }
+
+.document-panel {
+  --document-panel-border: #e1e3e7;
+  --document-panel-padding: 20px;
+  --document-panel-radius: 10px;
+  --document-body-spacing: 24px;
+  --document-empty-color: #a5a9b1;
+  padding: var(--document-panel-padding);
+  border: 1px solid var(--document-panel-border);
+  border-radius: var(--document-panel-radius);
+  background: #fff;
+}
+.document-panel .document-header {
+  margin-bottom: var(--document-panel-padding);
+}
+.document-panel .document-canvas {
+  border: 0;
+  outline: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.document-body {
+  position: relative;
+}
+.document-panel .tiptap {
+  padding: var(--document-body-spacing) 0;
+}
+.document-empty-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--document-empty-color);
+  font-size: 15px;
+  font-style: italic;
+  font-synthesis: style;
+  pointer-events: none;
+  user-select: none;
+}
+@media (max-width: 760px) {
+  .document-panel {
+    --document-panel-padding: 14px;
+    --document-body-spacing: 20px;
+  }
+}
+
+.document-panel .document-actions {
+  max-width: 100%;
+  flex-shrink: 1;
+}
