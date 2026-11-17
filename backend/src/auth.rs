@@ -143,6 +143,16 @@ pub async fn transaction<'a>(
     if write {
         origin(state, headers)?;
         guard(&mut tx).await?;
+        let maintenance: bool = sqlx::query_scalar("SELECT maintenance FROM auth_guard WHERE id=1")
+            .fetch_one(&mut *tx)
+            .await?;
+        if maintenance {
+            return Err(Failure(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "MAINTENANCE",
+                "系统维护中，请稍后重试",
+            ));
+        }
     } else {
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
             .execute(&mut *tx)

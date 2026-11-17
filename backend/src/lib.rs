@@ -21,3 +21,5 @@ pub mod permissions;
 pub mod recent;
 
 pub mod moves;
+
+pub mod jobs;

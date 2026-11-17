@@ -12,6 +12,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::fs::create_dir_all(&config.attachment_dir).await?;
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
     tracing::info!(address=%config.bind_addr,"server started");
+    let (stop, stopped) = tokio::sync::watch::channel(false);
+    let worker = tokio::spawn(wiki_api::jobs::run(
+        pool.clone(),
+        config.attachment_dir.clone(),
+        stopped,
+    ));
     axum::serve(
         listener,
         router(AppState {
@@ -22,6 +28,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .with_graceful_shutdown(shutdown())
     .await?;
+    let _ = stop.send(true);
+    worker.await?;
     pool.close().await;
     Ok(())
 }
