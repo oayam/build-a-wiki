@@ -12,7 +12,7 @@ import {
   Popconfirm,
   Spin,
 } from "antd";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { request } from "./session";
 import type { components } from "./api.generated";
 type K = components["schemas"]["KnowledgeBase"];
@@ -100,6 +100,7 @@ export function Libraries() {
   );
 }
 export function PermissionPanel({ page = false }: { page?: boolean }) {
+  const navigate = useNavigate();
   const { id } = useParams();
   const base = page ? `/pages/${id}` : `/knowledge-bases/${id}`;
   const [data, setData] = React.useState<P>();
@@ -141,7 +142,16 @@ export function PermissionPanel({ page = false }: { page?: boolean }) {
   const names = new Map(subjects.map((s) => [s.id, s.name]));
   return (
     <>
-      <h1>{page ? "页面权限" : (k?.name ?? "知识库权限")}</h1>
+      <div className="settings-heading">
+        <Button
+          icon={<Icon name="chevron" style={{ transform: "rotate(180deg)" }} />}
+          disabled={busy}
+          onClick={() => navigate(base)}
+        >
+          {page ? "返回页面" : "返回知识库"}
+        </Button>
+        <h1>{page ? "页面权限" : (k?.name ?? "知识库权限")}</h1>
+      </div>
       {error && (
         <Alert
           type="error"
@@ -166,7 +176,7 @@ export function PermissionPanel({ page = false }: { page?: boolean }) {
                   onChange={setMode}
                   options={[
                     { value: "inherit", label: "继承权限" },
-                    { value: "independent", label: "独立授权（替换继承）" },
+                    { value: "independent", label: "独立授权" },
                   ]}
                 />
               )}

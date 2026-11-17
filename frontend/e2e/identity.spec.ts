@@ -114,7 +114,7 @@ test("browser identity → groups → private library → ACL → revoke → ind
   });
   await owner.goto(`/pages/${pid}/permissions`);
   await expect(owner.getByRole("heading", { name: "页面权限" })).toBeVisible();
-  await select(owner, "授权模式", "独立授权（替换继承）");
+  await select(owner, "授权模式", "独立授权");
   await select(owner, "添加授权对象", "用户：editor");
   await save(owner);
   await editor.goto(`/pages/${pid}/permissions`);
