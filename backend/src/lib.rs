@@ -14,4 +14,5 @@ pub mod body;
 pub mod http;
 pub mod identity;
 pub mod knowledge;
+pub mod pages;
 pub mod permissions;

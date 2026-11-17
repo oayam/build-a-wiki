@@ -164,6 +164,22 @@ export interface paths {
     patch: operations["rename"];
     trace?: never;
   };
+  "/api/v1/knowledge-bases/{id}/pages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["tree"];
+    put?: never;
+    post: operations["create"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/knowledge-bases/{id}/permissions": {
     parameters: {
       query?: never;
@@ -228,6 +244,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/pages/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["read"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/pages/{id}/permissions": {
     parameters: {
       query?: never;
@@ -244,6 +276,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/pages/{id}/revisions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["save"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/pages/{id}/subjects": {
     parameters: {
       query?: never;
@@ -252,6 +300,22 @@ export interface paths {
       cookie?: never;
     };
     get: operations["page_subjects"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/shared-pages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["shared"];
     put?: never;
     post?: never;
     delete?: never;
@@ -310,6 +374,18 @@ export interface components {
       message: string;
       request_id: string;
     };
+    Content: {
+      body: unknown;
+      /** Format: int32 */
+      schema_version: number;
+      title: string;
+    };
+    CreatePage: components["schemas"]["Content"] & {
+      /** Format: uuid */
+      parent_id?: string | null;
+      /** Format: uuid */
+      request_id: string;
+    };
     Entry: {
       /** Format: uuid */
       group_id?: string | null;
@@ -357,6 +433,50 @@ export interface components {
       password: string;
       username: string;
     };
+    Page: {
+      body: unknown;
+      body_text: string;
+      /** Format: uuid */
+      current_revision_id: string;
+      /** Format: uuid */
+      editor_id: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      knowledge_base_id: string;
+      /** Format: int64 */
+      lock_version: number;
+      /** Format: uuid */
+      parent_id?: string | null;
+      /** Format: int32 */
+      role: number;
+      /** Format: int32 */
+      schema_version: number;
+      title: string;
+    };
+    PageDetail: components["schemas"]["Page"] & {
+      breadcrumbs: components["schemas"]["PageLink"][];
+    };
+    PageLink: {
+      /** Format: uuid */
+      id: string;
+      title: string;
+    };
+    PageList: {
+      items: components["schemas"]["PageSummary"][];
+      /** Format: uuid */
+      next_cursor?: string | null;
+    };
+    PageSummary: {
+      has_children: boolean;
+      /** Format: uuid */
+      id: string;
+      /** Format: int64 */
+      position: number;
+      /** Format: int32 */
+      role: number;
+      title: string;
+    };
     Password: {
       password: string;
     };
@@ -375,6 +495,21 @@ export interface components {
       /** Format: int32 */
       role: number;
       source: string;
+    };
+    SavePage: components["schemas"]["Content"] & {
+      /** Format: uuid */
+      base_revision_id: string;
+      /** Format: uuid */
+      request_id: string;
+      summary?: string | null;
+    };
+    Saved: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      revision_id: string;
+      /** Format: int64 */
+      revision_no: number;
     };
     Subject: {
       /** Format: uuid */
@@ -762,6 +897,64 @@ export interface operations {
       };
     };
   };
+  tree: {
+    parameters: {
+      query?: {
+        parent_id?: string;
+        limit?: number;
+        cursor?: string;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PageList"];
+        };
+      };
+    };
+  };
+  create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreatePage"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Saved"];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
   kb_permissions: {
     parameters: {
       query?: never;
@@ -881,6 +1074,27 @@ export interface operations {
       };
     };
   };
+  read: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PageDetail"];
+        };
+      };
+    };
+  };
   page_permissions: {
     parameters: {
       query?: never;
@@ -927,6 +1141,39 @@ export interface operations {
       };
     };
   };
+  save: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SavePage"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Saved"];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
   page_subjects: {
     parameters: {
       query?: never;
@@ -944,6 +1191,28 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Subject"][];
+        };
+      };
+    };
+  };
+  shared: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PageList"];
         };
       };
     };

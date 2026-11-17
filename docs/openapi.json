@@ -509,6 +509,113 @@
         }
       }
     },
+    "/api/v1/knowledge-bases/{id}/pages": {
+      "get": {
+        "tags": [
+          "crate::pages"
+        ],
+        "operationId": "tree",
+        "parameters": [
+          {
+            "name": "parent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "crate::pages"
+        ],
+        "operationId": "create",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saved"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/knowledge-bases/{id}/permissions": {
       "get": {
         "tags": [
@@ -680,6 +787,37 @@
         }
       }
     },
+    "/api/v1/pages/{id}": {
+      "get": {
+        "tags": [
+          "crate::pages"
+        ],
+        "operationId": "read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pages/{id}/permissions": {
       "get": {
         "tags": [
@@ -748,6 +886,57 @@
         }
       }
     },
+    "/api/v1/pages/{id}/revisions": {
+      "post": {
+        "tags": [
+          "crate::pages"
+        ],
+        "operationId": "save",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saved"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pages/{id}/subjects": {
       "get": {
         "tags": [
@@ -775,6 +964,46 @@
                   "items": {
                     "$ref": "#/components/schemas/Subject"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shared-pages": {
+      "get": {
+        "tags": [
+          "crate::pages"
+        ],
+        "operationId": "shared",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageList"
                 }
               }
             }
@@ -879,6 +1108,50 @@
             "type": "string"
           }
         }
+      },
+      "Content": {
+        "type": "object",
+        "required": [
+          "title",
+          "schema_version",
+          "body"
+        ],
+        "properties": {
+          "body": {},
+          "schema_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "CreatePage": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Content"
+          },
+          {
+            "type": "object",
+            "required": [
+              "request_id"
+            ],
+            "properties": {
+              "parent_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "request_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ]
       },
       "Entry": {
         "type": "object",
@@ -1041,6 +1314,153 @@
           }
         }
       },
+      "Page": {
+        "type": "object",
+        "required": [
+          "id",
+          "knowledge_base_id",
+          "title",
+          "current_revision_id",
+          "schema_version",
+          "body",
+          "body_text",
+          "role",
+          "lock_version",
+          "editor_id"
+        ],
+        "properties": {
+          "body": {},
+          "body_text": {
+            "type": "string"
+          },
+          "current_revision_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "editor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "knowledge_base_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lock_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "role": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "schema_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "PageDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Page"
+          },
+          {
+            "type": "object",
+            "required": [
+              "breadcrumbs"
+            ],
+            "properties": {
+              "breadcrumbs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PageLink"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "PageLink": {
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "PageList": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PageSummary"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "PageSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "position",
+          "role",
+          "has_children"
+        ],
+        "properties": {
+          "has_children": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "position": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "role": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "Password": {
         "type": "object",
         "required": [
@@ -1112,6 +1532,58 @@
           },
           "source": {
             "type": "string"
+          }
+        }
+      },
+      "SavePage": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Content"
+          },
+          {
+            "type": "object",
+            "required": [
+              "request_id",
+              "base_revision_id"
+            ],
+            "properties": {
+              "base_revision_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "request_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "summary": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "Saved": {
+        "type": "object",
+        "required": [
+          "id",
+          "revision_id",
+          "revision_no"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision_no": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

@@ -170,6 +170,7 @@ pub fn router(state: AppState) -> Router {
         .merge(crate::auth::routes())
         .merge(crate::admin::routes())
         .merge(crate::knowledge::routes())
+        .merge(crate::pages::routes())
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
         .fallback(not_found)
@@ -180,6 +181,11 @@ pub fn router(state: AppState) -> Router {
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        crate::pages::create,
+        crate::pages::tree,
+        crate::pages::read,
+        crate::pages::save,
+        crate::pages::shared,
         live,
         ready,
         crate::auth::login,
