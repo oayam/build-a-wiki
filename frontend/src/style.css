@@ -867,77 +867,41 @@ summary:focus-visible {
   flex-shrink: 0;
   padding: 0;
 }
-.document-links {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 16px 0 20px;
-  padding: 10px 12px;
-  background: #f6f9fe;
-  border: 1px solid #e2eaf6;
-  border-radius: 9px;
+.document-settings-trigger.ant-btn {
+  width: 36px;
+  padding: 0;
+  color: #52739e;
 }
-.document-tools-label {
-  color: #657a9a;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.document-tool-buttons {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.document-settings-menu {
+  display: grid;
   gap: 8px;
-  min-width: 0;
+  padding-top: 8px;
 }
-.document-links a {
-  display: inline-flex;
+.document-settings-menu a {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 36px;
-  padding: 7px 12px;
-  background: #fff;
-  border: 1px solid #cfddf0;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
   border-radius: 6px;
   color: #34527c;
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 600;
-  white-space: nowrap;
+  background: #f6f9fe;
   transition:
     background-color 120ms ease,
-    border-color 120ms ease,
     color 120ms ease;
 }
-.document-links a svg {
-  width: 17px;
-  height: 17px;
-  color: #4b7ccc;
-}
-.document-links a:hover {
+.document-settings-menu a:hover {
+  background: #eaf2ff;
   color: #165cda;
-  border-color: #8eb3ed;
-  background: #edf4ff;
 }
-.document-links a:active {
-  background: #dceaff;
-}
-.document-links .document-tool-danger {
-  margin-left: 6px;
-  border-color: #efcaca;
+.document-settings-menu .document-tool-danger {
+  margin-top: 8px;
   color: #b43e45;
-  background: #fff8f8;
+  background: #fff5f5;
 }
-.document-links .document-tool-danger svg {
-  color: inherit;
-}
-.document-links .document-tool-danger:hover {
-  border-color: #da858a;
+.document-settings-menu .document-tool-danger:hover {
+  background: #ffe8e8;
   color: #a72d36;
-  background: #ffeded;
 }
 .workspace-crumb {
   overflow: hidden;
@@ -1017,26 +981,6 @@ summary:focus-visible {
 }
 @media (max-width: 760px) {
   .document-header .document-actions {
-    margin-left: 0;
-  }
-}
-@media (max-width: 900px) {
-  .document-links {
-    display: block;
-  }
-  .document-tools-label {
-    display: block;
-    margin-bottom: 9px;
-  }
-  .document-tool-buttons {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .document-links a {
-    min-height: 40px;
-    padding: 7px 8px;
-  }
-  .document-links .document-tool-danger {
     margin-left: 0;
   }
 }

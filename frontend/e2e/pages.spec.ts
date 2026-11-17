@@ -65,6 +65,7 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   await expect(page.locator(".tiptap")).toContainText("刷新后恢复的草稿");
   await page.getByRole("button", { name: "保存共享版本" }).click();
   await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "页面设置", exact: true }).click();
   await page.getByRole("link", { name: "版本历史", exact: true }).click();
   await page.getByRole("button", { name: "查看版本2", exact: true }).click();
   await expect(
@@ -75,6 +76,7 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   await expect(page.getByText(/已恢复为新的共享版本/)).toBeVisible();
   await page.getByRole("link", { name: "返回页面", exact: true }).click();
   await expect(page.locator(".tiptap")).toContainText("甲的中文内容");
+  await page.getByRole("button", { name: "页面设置", exact: true }).click();
   await page.getByRole("link", { name: "移动与排序", exact: true }).click();
   await page.getByRole("spinbutton", { name: "排序序号" }).fill("-10");
   await page.getByRole("button", { name: "预览移动影响" }).click();

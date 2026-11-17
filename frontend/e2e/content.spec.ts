@@ -75,6 +75,7 @@ test("attachments, literal search, trash restore, audit and offline local resour
   await page.getByLabel("全局搜索").press("Enter");
   await page.getByRole("link", { name: "附件百分比100%", exact: true }).click();
   await expect(page).toHaveURL(url);
+  await page.getByRole("button", { name: "页面设置", exact: true }).click();
   await page.getByRole("link", { name: "删除页面", exact: true }).click();
   await page.getByRole("button", { name: "预览删除影响" }).click();
   await expect(page.getByText(/本次将删除 1 个页面/)).toBeVisible();

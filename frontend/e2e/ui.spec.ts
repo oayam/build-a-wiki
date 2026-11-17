@@ -118,6 +118,15 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
       exact: true,
     }),
   ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("link", { name: "版本历史", exact: true })).not.toBeVisible();
+  const settings = page.getByRole("button", { name: "页面设置", exact: true });
+  await settings.click();
+  const settingsDialog = page.getByRole("dialog", { name: "页面设置" });
+  await expect(settingsDialog.getByRole("link", { name: "页面权限", exact: true })).toBeVisible();
+  await expect.poll(() => settingsDialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(settingsDialog).not.toBeVisible();
+  await expect(settings).toBeFocused();
   await page.getByRole("button", { name: "编辑页面", exact: true }).click();
   await expect(page.getByRole("toolbar", { name: "正文格式" })).toBeVisible();
   const output = process.env.UI_SCREENSHOT_DIR ?? testInfo.outputPath("ui");

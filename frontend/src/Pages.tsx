@@ -5,7 +5,7 @@ import Icon from "./Icon";
 import EditorToolbar from "./EditorToolbar";
 import { Collapse, MotionAlert, TreeRow, notifyCreatedNode } from "./Motion";
 import type { CreatePageTarget } from "./CreatePageDialog";
-import { Alert, Button, Input, Form, Space, Spin, Empty } from "antd";
+import { Alert, Button, Input, Form, Space, Spin, Empty, Modal } from "antd";
 import {
   Link,
   NavLink,
@@ -274,6 +274,7 @@ function Document({
 }) {
   const { user } = useSession();
   const [editing, setEditing] = React.useState(false);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [title, setTitle] = React.useState(page.title);
   const [body, setBody] = React.useState<JSONContent>(page.body as JSONContent);
   const [dirty, setDirty] = React.useState(false);
@@ -451,11 +452,31 @@ function Document({
               </Button>
             </>
           )}
+          <Button
+            className="document-settings-trigger"
+            aria-label="页面设置"
+            title="页面设置"
+            aria-haspopup="dialog"
+            aria-expanded={settingsOpen}
+            icon={<Icon name="settings" />}
+            onClick={() => setSettingsOpen(true)}
+          />
         </Space>
       </div>
-      <nav className="document-links" aria-label="页面操作">
-        <span className="document-tools-label">页面操作</span>
-        <div className="document-tool-buttons">
+      <Modal
+        title="页面设置"
+        open={settingsOpen}
+        onCancel={() => setSettingsOpen(false)}
+        footer={null}
+        width={360}
+        transitionName="wiki-dialog"
+        maskTransitionName="wiki-mask"
+      >
+        <nav
+          className="document-settings-menu"
+          aria-label="页面操作"
+          onClick={() => setSettingsOpen(false)}
+        >
           <Link to={`/pages/${page.id}/permissions`}>
             <Icon name="shield" />
             页面权限
@@ -479,8 +500,8 @@ function Document({
               删除页面
             </Link>
           )}
-        </div>
-      </nav>
+        </nav>
+      </Modal>
       <MotionAlert
         visible={!!message}
         type="success"
