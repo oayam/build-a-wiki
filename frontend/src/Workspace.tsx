@@ -1,4 +1,5 @@
 import React from "react";
+import { useSidebarResize } from "./useSidebarResize";
 import { captureDialogTrigger } from "./useDialogFocusReturn";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +35,7 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [createdNode]);
   const [collapsed, setCollapsed] = React.useState(false);
+  const sidebarResize = useSidebarResize(collapsed);
   const [createLibrary, setCreateLibrary] = React.useState(false);
   const [createTarget, setCreateTarget] = React.useState<CreatePageTarget>();
   const [query, setQuery] = React.useState("");
@@ -130,7 +132,8 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   return (
     <CreatedNodeContext.Provider value={createdNode}>
       <div
-        className={`shell ${collapsed ? "sidebar-collapsed" : ""}`}
+        className={`shell ${collapsed ? "sidebar-collapsed" : ""} ${sidebarResize.resizing ? "sidebar-resizing" : ""}`}
+        style={sidebarResize.style}
         onClickCapture={captureDialogTrigger}
       >
         <header className="topbar">
@@ -304,6 +307,7 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
               团队工作区<span>Build-a-Wiki</span>
             </footer>
           </div>
+          <div className="sidebar-resizer" {...sidebarResize.separatorProps} />
         </aside>
         {createLibrary && (
           <CreateLibraryDialog onClose={() => setCreateLibrary(false)} />

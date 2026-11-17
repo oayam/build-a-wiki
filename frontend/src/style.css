@@ -6,7 +6,16 @@
   --blue: #2468ed;
   --muted: #7d8ba4;
   --border: #e1e8f2;
-  --topbar-height: 61.2px;
+  --topbar-height: 58px;
+  --topbar-gradient-angle: 110deg;
+  --topbar-blue-start: #5284d4;
+  --topbar-blue-middle: #416fba;
+  --topbar-blue-end: #365e99;
+  --topbar-gradient-middle: 58%;
+  --sidebar-resizer-width: 8px;
+  --sidebar-resizer-line-width: 2px;
+  --sidebar-resizer-color: #78a2e3;
+  --sidebar-resizer-active-color: #3677df;
 }
 * {
   box-sizing: border-box;
@@ -42,7 +51,12 @@ svg {
   align-items: center;
   gap: 32px;
   padding: 0 24px 0 20px;
-  background: linear-gradient(110deg, #4779ce 0%, #315fae 58%, #244982 100%);
+  background: linear-gradient(
+    var(--topbar-gradient-angle),
+    var(--topbar-blue-start),
+    var(--topbar-blue-middle) var(--topbar-gradient-middle),
+    var(--topbar-blue-end)
+  );
   color: #fff;
   box-shadow: 0 1px 5px #163f7620;
 }
@@ -1503,4 +1517,40 @@ summary:focus-visible {
   .system-status-card dd {
     font-size: 24px;
   }
+}
+
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--sidebar-resizer-width);
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 1;
+}
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: var(--sidebar-resizer-line-width);
+  background: transparent;
+}
+.sidebar-resizer:hover::after {
+  background: var(--sidebar-resizer-color);
+}
+.sidebar-resizer:focus-visible {
+  outline: var(--sidebar-resizer-line-width) solid
+    var(--sidebar-resizer-active-color);
+  outline-offset: calc(-1 * var(--sidebar-resizer-line-width));
+}
+.sidebar-resizing {
+  transition: none;
+  cursor: col-resize;
+  user-select: none;
+}
+.sidebar-resizing .sidebar-resizer::after {
+  background: var(--sidebar-resizer-active-color);
 }
