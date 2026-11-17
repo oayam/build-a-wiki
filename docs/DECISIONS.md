@@ -78,3 +78,15 @@ page_drafts 主键(page_id,user_id)，含 title/schema_version/body_json/base_re
 补齐接口：GET/PUT/DELETE /pages/{id}/draft；GET /recent-visits、PUT /pages/{id}/visit；GET/POST /admin/users、PATCH /admin/users/{id}、POST /admin/users/{id}/reset-password；GET/POST /admin/groups、PUT/DELETE /admin/groups/{id}/members/{user_id}；POST /knowledge-bases/{id}/transfer-ownership；POST /pages/{id}/move-preview、POST /pages/{id}/delete-preview。全部需要有效会话及对应权限；后续各任务补充 OpenAPI schema。
 
 T10 补充：405 METHOD_NOT_ALLOWED 同样返回标准错误结构；健康检查公开且仅返回 ok/NOT_READY，不返回连接串、路径或 schema 详情。
+
+## C组落地补充（T25～T36）
+
+页面最大深度64；正文schema v1最大2MiB、嵌套64层，前后端共享正文夹具。页面和子树列表先鉴权再分页；隐藏祖先不返回标题，独立可见页面可从共享入口打开。
+
+创建/保存/恢复接口以JSON中的request_id UUID提供幂等性（当前未使用HTTP Idempotency-Key）；同一操作者、资源、请求ID内容不同返回409。幂等记录与版本在同一事务提交，目前保留至后续清理策略落地。目录采用(position,UUID)排序并以末项UUID查回位置，历史按版本号倒序游标；与早期通用分页草案相比，此阶段使用类型化简单游标，详见OpenAPI。
+
+草稿按(page,user)保存，draft_version乐观锁；删除保留递增版本的墓碑，阻止迟到请求复活旧草稿。客户端2秒防抖、串行发送，并使失效队列任务停止提交。草稿只对本人且仍可编辑时开放；恢复历史不自动覆盖个人草稿。共享保存后的清理若遇其他窗口草稿更新，会明确提示，不静默删除他人的新编辑。
+
+移动预览和执行都持有授权屏障、知识库和源页面锁；完整子树须可管理、目标须可编辑，同库、无环、总深度不超过64。预览返回受影响页数及跟随目标授权的页数，独立授权边界保持原状。确认时比较结构/授权状态摘要：包含本库页面及当前授权、组成员、账号状态、库所有者；不含密码与会话。任何相关变动返回MOVE_CONFLICT并重新预览；当前采用保守摘要，其他库授权变化也可能使预览失效。排序(position,UUID)确定，页面UUID、版本和ACL不因移动而改写。
+
+最近访问记录使用PUT增量更新；首页显示最近20项，查询时重新过滤权限，撤权页面立即从结果移除。正文和历史比较为标题/纯文本并排展示，暂不提供逐字符差异高亮。

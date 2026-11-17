@@ -28,3 +28,6 @@ argon2 0.5.3（密码哈希，锁文件已更新）
 Chromium / Chrome Headless Shell 159.0.8154.6 (Playwright build 1255)
 FFmpeg (Playwright build 1013)
 Playwright官方 install-deps 安装的 Linux 浏览器共享库、中文字体及 xvfb
+
+# C组（T25～T36）
+复用已安装的 Rust、PostgreSQL、Node.js、Playwright/Chromium；本组未新增环境或第三方依赖。
