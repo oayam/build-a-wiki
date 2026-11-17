@@ -1040,3 +1040,27 @@ summary:focus-visible {
   color: #788ba9;
   overflow-wrap: anywhere;
 }
+.tree-triangle {
+  display: inline-block;
+  font-size: 10px;
+  line-height: 1;
+  color: #6a7d9d;
+  transition: transform 0.15s;
+}
+.tree-triangle.expanded {
+  transform: rotate(180deg);
+}
+.directory-create {
+  display: grid;
+  place-items: center;
+  background: #e1ebff;
+  color: var(--blue);
+  border: 0;
+  border-radius: 5px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+.directory-create:hover {
+  background: #cfe0ff;
+}

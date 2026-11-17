@@ -283,4 +283,78 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
     await page.request.get(`/api/v1/pages/${page.url().split("/").pop()}`)
   ).json();
   expect(rootPage.parent_id).toBeNull();
+  await page.goto(`/pages/${ids.page}`);
+  await expect(
+    page
+      .getByRole("main")
+      .getByRole("heading", { name: "子页面", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("main").locator(".page-tree")).toHaveCount(0);
+  const collapse = sidebar.getByRole("button", {
+    name: "收起-Build-a-Wiki 使用指南",
+    exact: true,
+  });
+  await expect(collapse).toContainText("▲");
+  await collapse.click();
+  await expect(
+    sidebar.getByRole("link", {
+      name: "打开页面：目录创建的子页面",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await sidebar
+    .getByRole("button", { name: "展开-Build-a-Wiki 使用指南", exact: true })
+    .click();
+  await expect(
+    sidebar.getByRole("link", {
+      name: "打开页面：目录创建的子页面",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    sidebar.getByRole("button", { name: "展开-项目概述", exact: true }),
+  ).toHaveCount(0);
+  await sidebar
+    .getByRole("button", { name: "新建知识库", exact: true })
+    .click();
+  const libraryDialog = page.getByRole("dialog", {
+    name: "新建知识库",
+    exact: true,
+  });
+  await libraryDialog
+    .getByRole("button", { name: "确认创建知识库", exact: true })
+    .click();
+  await expect(
+    libraryDialog.getByText("请输入 1～100 个字符的知识库名称"),
+  ).toBeVisible();
+  await libraryDialog
+    .getByLabel("新建知识库名称", { exact: true })
+    .fill("目录加号创建的知识库");
+  await libraryDialog
+    .getByRole("button", { name: "确认创建知识库", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "目录加号创建的知识库", exact: true }),
+  ).toBeVisible();
+  await expect(
+    sidebar.getByRole("link", {
+      name: "打开知识库：目录加号创建的知识库",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await sidebar
+    .getByRole("button", {
+      name: "创建页面：目录加号创建的知识库",
+      exact: true,
+    })
+    .click();
+  await rootDialog
+    .getByLabel("新建页面标题", { exact: true })
+    .fill("新知识库的首个页面");
+  await rootDialog
+    .getByRole("button", { name: "确认创建", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "新知识库的首个页面", exact: true }),
+  ).toBeVisible();
 });

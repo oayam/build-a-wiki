@@ -7,6 +7,7 @@ import type { components } from "./api.generated";
 import { Account, request, useSession } from "./session";
 import { PageTree } from "./Pages";
 import Icon, { type IconName } from "./Icon";
+import CreateLibraryDialog from "./CreateLibraryDialog";
 import CreatePageDialog, { type CreatePageTarget } from "./CreatePageDialog";
 type K = components["schemas"]["KnowledgeBase"];
 export default function Workspace({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const client = useQueryClient();
   const [collapsed, setCollapsed] = React.useState(false);
+  const [createLibrary, setCreateLibrary] = React.useState(false);
   const [createTarget, setCreateTarget] = React.useState<CreatePageTarget>();
   const [query, setQuery] = React.useState("");
   const [more, setMore] = React.useState<K[]>([]);
@@ -160,13 +162,14 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
           </nav>
           <div className="sidebar-section-label">
             知识库目录
-            <Link
-              to={current ? `/knowledge-bases/${current}` : "/"}
-              aria-label="前往新建页面"
-              title="前往知识库创建页面"
+            <button
+              className="directory-create"
+              aria-label="新建知识库"
+              title="新建知识库"
+              onClick={() => setCreateLibrary(true)}
             >
               <Icon name="plus" />
-            </Link>
+            </button>
           </div>
           {libraries.isPending && <Spin size="small" />}
           {libraries.error && (
@@ -198,10 +201,12 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
                       )
                     }
                   >
-                    <Icon
-                      name="chevron"
-                      className={open.includes(k.id) ? "rotated" : ""}
-                    />
+                    <span
+                      className={`tree-triangle ${open.includes(k.id) ? "expanded" : ""}`}
+                      aria-hidden="true"
+                    >
+                      ▲
+                    </span>
                   </button>
                   <Link
                     to={`/knowledge-bases/${k.id}`}
@@ -274,6 +279,9 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
           </footer>
         </div>
       </aside>
+      {createLibrary && (
+        <CreateLibraryDialog onClose={() => setCreateLibrary(false)} />
+      )}
       {createTarget && (
         <CreatePageDialog
           target={createTarget}

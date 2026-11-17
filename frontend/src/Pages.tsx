@@ -72,7 +72,7 @@ export function PageTree({
               {p.has_children ? (
                 <button
                   className="tree-toggle"
-                  aria-label={`展开-${p.title}`}
+                  aria-label={`${open.includes(p.id) ? "收起" : "展开"}-${p.title}`}
                   aria-expanded={open.includes(p.id)}
                   onClick={() =>
                     setOpen(
@@ -82,10 +82,12 @@ export function PageTree({
                     )
                   }
                 >
-                  <Icon
-                    name="chevron"
-                    className={open.includes(p.id) ? "rotated" : ""}
-                  />
+                  <span
+                    className={`tree-triangle ${open.includes(p.id) ? "expanded" : ""}`}
+                    aria-hidden="true"
+                  >
+                    ▲
+                  </span>
                 </button>
               ) : (
                 <span className="tree-toggle-spacer" />
@@ -564,8 +566,6 @@ function Document({
         editing={editing}
         canEdit={page.role >= 2}
       />
-      <h2>子页面</h2>
-      <PageTree kb={page.knowledge_base_id} parent={page.id} />
     </>
   );
 }
