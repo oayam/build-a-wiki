@@ -1604,3 +1604,42 @@ summary:focus-visible {
   max-width: 100%;
   flex-shrink: 1;
 }
+
+.sidebar .library-tree {
+  --directory-row-scale: 0.9;
+  --directory-indent-scale: 1.1;
+  --directory-base-row-height: 36px;
+  --directory-base-vertical-padding: 8px;
+  --directory-base-list-gap: 3px;
+  --directory-base-indent: 12px;
+  --directory-line-height: 18px;
+  --directory-icon-size: 18px;
+}
+.sidebar .library-tree-row,
+.sidebar .page-tree-row {
+  height: calc(var(--directory-base-row-height) * var(--directory-row-scale));
+}
+.sidebar .library-tree-row > a,
+.sidebar .page-tree-row > a {
+  height: 100%;
+  padding-top: calc(
+    var(--directory-base-vertical-padding) * var(--directory-row-scale)
+  );
+  padding-bottom: calc(
+    var(--directory-base-vertical-padding) * var(--directory-row-scale)
+  );
+  line-height: var(--directory-line-height);
+}
+.sidebar .library-tree-row > a > svg,
+.sidebar .page-tree-row > a > svg {
+  width: var(--directory-icon-size);
+  height: var(--directory-icon-size);
+}
+.sidebar .library-tree .page-tree {
+  margin-block: calc(
+    var(--directory-base-list-gap) * var(--directory-row-scale)
+  );
+  padding-left: calc(
+    var(--directory-base-indent) * var(--directory-indent-scale)
+  );
+}
