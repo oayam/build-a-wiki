@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+  "/api/v1/admin/audit-events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["audit_events"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/groups": {
     parameters: {
       query?: never;
@@ -52,6 +68,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/admin/jobs/{id}/retry": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["retry_job"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/system-status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["system_status"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/users": {
     parameters: {
       query?: never;
@@ -94,6 +142,22 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations["reset_password"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/attachments/{id}/download": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["download_attachment"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -254,6 +318,38 @@ export interface paths {
     get: operations["read"];
     put?: never;
     post?: never;
+    delete: operations["delete_page"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/pages/{id}/attachments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["list_attachments"];
+    put?: never;
+    post: operations["upload_attachment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/pages/{id}/delete-preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["delete_preview"];
     delete?: never;
     options?: never;
     head?: never;
@@ -318,6 +414,22 @@ export interface paths {
     get: operations["page_permissions"];
     put: operations["page_update"];
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/pages/{id}/restore": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["restore_deleted_page"];
     delete?: never;
     options?: never;
     head?: never;
@@ -420,6 +532,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["search_pages"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/search/people": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["search_people"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/shared-pages": {
     parameters: {
       query?: never;
@@ -428,6 +572,22 @@ export interface paths {
       cookie?: never;
     };
     get: operations["shared"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/trash": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["list_trash"];
     put?: never;
     post?: never;
     delete?: never;
@@ -486,6 +646,31 @@ export interface components {
       message: string;
       request_id: string;
     };
+    Attachment: {
+      checksum: string;
+      /** Format: uuid */
+      id: string;
+      mime_type: string;
+      original_name: string;
+      /** Format: int64 */
+      size: number;
+    };
+    AuditList: {
+      items: components["schemas"]["AuditRow"][];
+      /** Format: uuid */
+      next_cursor?: string | null;
+    };
+    AuditRow: {
+      action: string;
+      /** Format: uuid */
+      actor_id?: string | null;
+      created_at: string;
+      details: unknown;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      resource_id?: string | null;
+    };
     Content: {
       body: unknown;
       /** Format: int32 */
@@ -497,6 +682,14 @@ export interface components {
       parent_id?: string | null;
       /** Format: uuid */
       request_id: string;
+    };
+    DeleteInput: {
+      preview_token: string;
+    };
+    DeletePreview: {
+      /** Format: int64 */
+      affected_pages: number;
+      preview_token: string;
     };
     Draft: {
       /** Format: uuid */
@@ -532,6 +725,15 @@ export interface components {
     };
     Health: {
       status: string;
+    };
+    JobRow: {
+      /** Format: int32 */
+      attempts: number;
+      available_at: string;
+      /** Format: uuid */
+      id: string;
+      kind: string;
+      last_error?: string | null;
     };
     KnowledgeBase: {
       /** Format: int64 */
@@ -642,6 +844,11 @@ export interface components {
       role: number;
       source: string;
     };
+    Person: {
+      display_name: string;
+      /** Format: uuid */
+      id: string;
+    };
     Restore: {
       /** Format: uuid */
       base_revision_id: string;
@@ -649,6 +856,10 @@ export interface components {
       request_id: string;
       /** Format: uuid */
       revision_id: string;
+    };
+    RestoreInput: {
+      /** Format: uuid */
+      parent_id?: string | null;
     };
     Revision: {
       body: unknown;
@@ -698,15 +909,55 @@ export interface components {
       /** Format: int64 */
       revision_no: number;
     };
+    SearchHit: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      knowledge_base_id: string;
+      snippet: string;
+      title: string;
+      title_match: boolean;
+    };
+    SearchResults: {
+      items: components["schemas"]["SearchHit"][];
+      /** Format: uuid */
+      next_cursor?: string | null;
+    };
     Subject: {
       /** Format: uuid */
       id: string;
       kind: string;
       name: string;
     };
+    SystemStatus: {
+      /** Format: int64 */
+      disk_available_bytes?: number | null;
+      disk_warning: boolean;
+      /** Format: int64 */
+      failed_jobs: number;
+      jobs: components["schemas"]["JobRow"][];
+      maintenance: boolean;
+      /** Format: int64 */
+      pending_jobs: number;
+    };
     Transfer: {
       /** Format: uuid */
       owner_id: string;
+    };
+    TrashItem: {
+      /** Format: int64 */
+      affected_pages: number;
+      deleted_at: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      root_id: string;
+      title: string;
+    };
+    TrashList: {
+      items: components["schemas"]["TrashItem"][];
+      /** Format: uuid */
+      next_cursor?: string | null;
     };
     UpdateUser: {
       active: boolean;
@@ -730,6 +981,28 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  audit_events: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        action?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AuditList"];
+        };
+      };
+    };
+  };
   groups: {
     parameters: {
       query?: never;
@@ -837,6 +1110,46 @@ export interface operations {
       };
     };
   };
+  retry_job: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  system_status: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SystemStatus"];
+        };
+      };
+    };
+  };
   users: {
     parameters: {
       query?: never;
@@ -926,6 +1239,26 @@ export interface operations {
         content: {
           "application/json": unknown;
         };
+      };
+    };
+  };
+  download_attachment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Authorized bytes */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
@@ -1282,6 +1615,102 @@ export interface operations {
       };
     };
   };
+  delete_page: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteInput"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  list_attachments: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Attachment"][];
+        };
+      };
+    };
+  };
+  upload_attachment: {
+    parameters: {
+      query: {
+        request_id: string;
+        name: string;
+        sha256: string;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/octet-stream": string;
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Attachment"];
+        };
+      };
+    };
+  };
+  delete_preview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeletePreview"];
+        };
+      };
+    };
+  };
   get_draft: {
     parameters: {
       query?: never;
@@ -1471,6 +1900,31 @@ export interface operations {
       };
     };
   };
+  restore_deleted_page: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RestoreInput"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
   restore_revision: {
     parameters: {
       query?: never;
@@ -1644,6 +2098,54 @@ export interface operations {
       };
     };
   };
+  search_pages: {
+    parameters: {
+      query?: {
+        q?: string;
+        scope?: string;
+        fields?: string;
+        person_id?: string;
+        relation?: string;
+        cursor?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SearchResults"];
+        };
+      };
+    };
+  };
+  search_people: {
+    parameters: {
+      query?: {
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Person"][];
+        };
+      };
+    };
+  };
   shared: {
     parameters: {
       query?: {
@@ -1662,6 +2164,27 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PageList"];
+        };
+      };
+    };
+  };
+  list_trash: {
+    parameters: {
+      query?: {
+        cursor?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrashList"];
         };
       };
     };

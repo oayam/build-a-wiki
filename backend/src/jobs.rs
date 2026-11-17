@@ -39,8 +39,49 @@ pub async fn tick(pool: &sqlx::PgPool, root: &Path) -> Result<bool, sqlx::Error>
     let Some((id, kind, payload, attempts)) = job else {
         return Ok(false);
     };
+    sqlx::query("SAVEPOINT job_effect")
+        .execute(&mut *tx)
+        .await?;
     let result = match kind.as_str() {
         "remove_file" => remove(root, payload["key"].as_str().unwrap_or("")).await,
+        "purge_batch" => {
+            if let Some(b) = payload["id"].as_str().and_then(|v| Uuid::parse_str(v).ok()) {
+                crate::trash::purge(&mut tx, b)
+                    .await
+                    .map_err(|_| std::io::Error::other("purge failed"))
+            } else {
+                Err(std::io::Error::other("invalid batch"))
+            }
+        }
+        "expire_upload" => {
+            let a = payload["id"].as_str().and_then(|v| Uuid::parse_str(v).ok());
+            if let Some(a) = a {
+                let row: Option<(String, String)> = sqlx::query_as(
+                    "SELECT storage_key,status FROM attachments WHERE id=$1 FOR UPDATE",
+                )
+                .bind(a)
+                .fetch_optional(&mut *tx)
+                .await?;
+                if let Some((key, status)) = row {
+                    if status == "pending" {
+                        let r = remove(root, &key).await;
+                        if r.is_ok() {
+                            sqlx::query("DELETE FROM attachments WHERE id=$1")
+                                .bind(a)
+                                .execute(&mut *tx)
+                                .await?;
+                        }
+                        r
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Ok(())
+                }
+            } else {
+                Err(std::io::Error::other("invalid upload job"))
+            }
+        }
         _ => Err(std::io::Error::other("unsupported job")),
     };
     match result {
@@ -51,6 +92,9 @@ pub async fn tick(pool: &sqlx::PgPool, root: &Path) -> Result<bool, sqlx::Error>
                 .await?;
         }
         Err(_) => {
+            sqlx::query("ROLLBACK TO SAVEPOINT job_effect")
+                .execute(&mut *tx)
+                .await?;
             let delay = 2_i32.pow(attempts.min(11) as u32).min(3600);
             sqlx::query("UPDATE jobs SET attempts=attempts+1,last_error='task failed; check storage and task kind',available_at=now()+make_interval(secs=>$2) WHERE id=$1").bind(id).bind(delay as f64).execute(&mut *tx).await?;
         }

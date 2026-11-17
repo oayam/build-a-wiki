@@ -130,9 +130,13 @@ fn node(v: &Value, depth: usize, text: &mut Vec<String>) -> Result<()> {
                 keys(a, &["href", "target", "rel", "class", "title"])?;
                 let href = a["href"].as_str().ok_or_else(invalid)?;
                 if href.chars().any(|c| c.is_control() || c.is_whitespace())
-                    || !["https://", "http://", "mailto:"]
-                        .iter()
-                        .any(|prefix| href.starts_with(prefix))
+                    || !(href
+                        .strip_prefix("/api/v1/attachments/")
+                        .and_then(|v| v.strip_suffix("/download"))
+                        .is_some_and(|v| uuid::Uuid::parse_str(v).is_ok())
+                        || ["https://", "http://", "mailto:"]
+                            .iter()
+                            .any(|prefix| href.starts_with(prefix)))
                 {
                     return Err(invalid());
                 }

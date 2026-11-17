@@ -199,6 +199,7 @@ pub async fn login(
     let result=async{
   origin(&state,&headers)?;if input.username.is_empty()||input.username.len()>64||input.password.len()>256{return Err(invalid());}
   let mut tx=state.pool.begin().await?;guard(&mut tx).await?;
+  if sqlx::query_scalar::<_,bool>("SELECT maintenance FROM auth_guard WHERE id=1").fetch_one(&mut *tx).await?{return Err(Failure(StatusCode::SERVICE_UNAVAILABLE,"MAINTENANCE","系统维护中，请稍后重试"));}
   for key in ["__global__",input.username.as_str()] {
    sqlx::query("INSERT INTO login_attempts(username) VALUES($1) ON CONFLICT DO NOTHING").bind(key).execute(&mut *tx).await?;
    sqlx::query("UPDATE login_attempts SET failures=0,window_start=now() WHERE username=$1 AND window_start<now()-interval '15 minutes'").bind(key).execute(&mut *tx).await?;

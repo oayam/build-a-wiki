@@ -23,3 +23,10 @@ pub mod recent;
 pub mod moves;
 
 pub mod jobs;
+
+pub mod attachments;
+
+pub mod trash;
+
+pub mod operations;
+pub mod search;

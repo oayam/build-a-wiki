@@ -10,6 +10,45 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/admin/audit-events": {
+      "get": {
+        "tags": [
+          "crate::operations"
+        ],
+        "operationId": "audit_events",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/groups": {
       "get": {
         "tags": [
@@ -169,6 +208,55 @@
         }
       }
     },
+    "/api/v1/admin/jobs/{id}/retry": {
+      "post": {
+        "tags": [
+          "crate::operations"
+        ],
+        "operationId": "retry_job",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/system-status": {
+      "get": {
+        "tags": [
+          "crate::operations"
+        ],
+        "operationId": "system_status",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/users": {
       "get": {
         "tags": [
@@ -296,6 +384,30 @@
                 "schema": {}
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/attachments/{id}/download": {
+      "get": {
+        "tags": [
+          "crate::attachments"
+        ],
+        "operationId": "download_attachment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized bytes"
           }
         }
       }
@@ -816,6 +928,172 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "crate::trash"
+        ],
+        "operationId": "delete_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{id}/attachments": {
+      "get": {
+        "tags": [
+          "crate::attachments"
+        ],
+        "operationId": "list_attachments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Attachment"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "crate::attachments"
+        ],
+        "operationId": "upload_attachment",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sha256",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attachment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{id}/delete-preview": {
+      "post": {
+        "tags": [
+          "crate::trash"
+        ],
+        "operationId": "delete_preview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePreview"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/pages/{id}/draft": {
@@ -1089,6 +1367,45 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PermissionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{id}/restore": {
+      "post": {
+        "tags": [
+          "crate::trash"
+        ],
+        "operationId": "restore_deleted_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreInput"
               }
             }
           },
@@ -1381,6 +1698,121 @@
         }
       }
     },
+    "/api/v1/search": {
+      "get": {
+        "tags": [
+          "crate::search"
+        ],
+        "operationId": "search_pages",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "person_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "relation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResults"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search/people": {
+      "get": {
+        "tags": [
+          "crate::search"
+        ],
+        "operationId": "search_people",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Person"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/shared-pages": {
       "get": {
         "tags": [
@@ -1414,6 +1846,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PageList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trash": {
+      "get": {
+        "tags": [
+          "crate::trash"
+        ],
+        "operationId": "list_trash",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrashList"
                 }
               }
             }
@@ -1519,6 +1982,92 @@
           }
         }
       },
+      "Attachment": {
+        "type": "object",
+        "required": [
+          "id",
+          "original_name",
+          "mime_type",
+          "size",
+          "checksum"
+        ],
+        "properties": {
+          "checksum": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "original_name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AuditList": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditRow"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "AuditRow": {
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "created_at",
+          "details"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "actor_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "details": {},
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resource_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "Content": {
         "type": "object",
         "required": [
@@ -1562,6 +2111,33 @@
             }
           }
         ]
+      },
+      "DeleteInput": {
+        "type": "object",
+        "required": [
+          "preview_token"
+        ],
+        "properties": {
+          "preview_token": {
+            "type": "string"
+          }
+        }
+      },
+      "DeletePreview": {
+        "type": "object",
+        "required": [
+          "affected_pages",
+          "preview_token"
+        ],
+        "properties": {
+          "affected_pages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "preview_token": {
+            "type": "string"
+          }
+        }
       },
       "Draft": {
         "type": "object",
@@ -1682,6 +2258,37 @@
         "properties": {
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "JobRow": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "attempts",
+          "available_at"
+        ],
+        "properties": {
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "available_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -2064,6 +2671,22 @@
           }
         }
       },
+      "Person": {
+        "type": "object",
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "Restore": {
         "type": "object",
         "required": [
@@ -2082,6 +2705,18 @@
           },
           "revision_id": {
             "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RestoreInput": {
+        "type": "object",
+        "properties": {
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           }
         }
@@ -2244,6 +2879,56 @@
           }
         }
       },
+      "SearchHit": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "snippet",
+          "knowledge_base_id",
+          "title_match"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "knowledge_base_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "title_match": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SearchResults": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "Subject": {
         "type": "object",
         "required": [
@@ -2264,6 +2949,46 @@
           }
         }
       },
+      "SystemStatus": {
+        "type": "object",
+        "required": [
+          "maintenance",
+          "pending_jobs",
+          "failed_jobs",
+          "disk_warning",
+          "jobs"
+        ],
+        "properties": {
+          "disk_available_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
+          "disk_warning": {
+            "type": "boolean"
+          },
+          "failed_jobs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobRow"
+            }
+          },
+          "maintenance": {
+            "type": "boolean"
+          },
+          "pending_jobs": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "Transfer": {
         "type": "object",
         "required": [
@@ -2272,6 +2997,57 @@
         "properties": {
           "owner_id": {
             "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "TrashItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "root_id",
+          "title",
+          "deleted_at",
+          "affected_pages"
+        ],
+        "properties": {
+          "affected_pages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "deleted_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "root_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "TrashList": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrashItem"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           }
         }

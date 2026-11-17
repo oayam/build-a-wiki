@@ -297,7 +297,7 @@ pub async fn shared(
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/v1/knowledge-bases/{id}/pages", get(tree).post(create))
-        .route("/api/v1/pages/{id}", get(read))
+        .route("/api/v1/pages/{id}", get(read).delete(crate::trash::delete))
         .route(
             "/api/v1/pages/{id}/revisions",
             post(save).get(crate::history::list),
