@@ -1,4 +1,5 @@
 use std::io::Read;
+use wiki_api::constants::{audit_action, env};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let name = std::env::args()
@@ -8,7 +9,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::io::stdin().take(258).read_to_string(&mut password)?;
     let hash = wiki_api::identity::hash_password(password.trim_end_matches(['\r', '\n']))
         .map_err(std::io::Error::other)?;
-    let pool = wiki_api::pool(&std::env::var("DATABASE_URL")?).await?;
+    let pool = wiki_api::pool(&std::env::var(env::DATABASE_URL)?).await?;
     let mut tx = pool.begin().await?;
     wiki_api::identity::guard(&mut tx).await?;
     let id: uuid::Uuid =
@@ -24,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     wiki_api::identity::audit(
         &mut tx,
         None,
-        "users.local_password_reset",
+        audit_action::USERS_LOCAL_PASSWORD_RESET,
         Some(id),
         &uuid::Uuid::new_v4().to_string(),
         serde_json::json!({}),

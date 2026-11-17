@@ -1,3 +1,4 @@
+use crate::constants::audit_action;
 use crate::{
     auth::*,
     http::{AppState, RequestId},
@@ -91,7 +92,7 @@ pub async fn retry(
             crate::identity::audit(
                 &mut tx,
                 Some(u.id),
-                "jobs.retry",
+                audit_action::JOBS_RETRY,
                 Some(j),
                 &id.0,
                 serde_json::json!({}),

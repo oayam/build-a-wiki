@@ -1,3 +1,4 @@
+use wiki_api::constants::message;
 use wiki_api::http::{AppState, Config, router};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -8,7 +9,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
     let pool = wiki_api::pool(&config.database_url)
         .await
-        .map_err(|_| std::io::Error::other("database connection failed"))?;
+        .map_err(|_| std::io::Error::other(message::DATABASE_CONNECTION_FAILED))?;
     tokio::fs::create_dir_all(&config.attachment_dir).await?;
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
     tracing::info!(address=%config.bind_addr,"server started");

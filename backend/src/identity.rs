@@ -1,3 +1,4 @@
+use crate::constants::{audit_action, message};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
 use sha2::{Digest, Sha256};
 use sqlx::{Postgres, Transaction};
@@ -5,13 +6,14 @@ use uuid::Uuid;
 const MIN_PASSWORD_CHARS: usize = 12;
 pub fn hash_password(password: &str) -> Result<String, String> {
     if password.chars().count() < MIN_PASSWORD_CHARS || password.len() > 256 {
-        return Err("密码至少12个字符，最多256字节".into());
+        return Err(message::PASSWORD_POLICY.into());
     }
-    let salt = SaltString::encode_b64(Uuid::new_v4().as_bytes()).map_err(|_| "密码处理失败")?;
+    let salt = SaltString::encode_b64(Uuid::new_v4().as_bytes())
+        .map_err(|_| message::PASSWORD_HASH_FAILED)?;
     Argon2::default()
         .hash_password(password.as_bytes(), &salt)
         .map(|h| h.to_string())
-        .map_err(|_| "密码处理失败".into())
+        .map_err(|_| message::PASSWORD_HASH_FAILED.into())
 }
 pub fn verify_password(password: &str, hash: &str) -> bool {
     PasswordHash::new(hash).is_ok_and(|h| {
@@ -45,9 +47,9 @@ pub async fn audit(
     let maintenance: bool = sqlx::query_scalar("SELECT maintenance FROM auth_guard WHERE id=1")
         .fetch_one(&mut **tx)
         .await?;
-    if maintenance && action != "system.maintenance" {
+    if maintenance && action != audit_action::SYSTEM_MAINTENANCE {
         return Err(sqlx::Error::Protocol(
-            "maintenance blocks audit writes".into(),
+            message::MAINTENANCE_BLOCKS_AUDIT.into(),
         ));
     }
     let mut safe = serde_json::Map::new();
@@ -67,31 +69,31 @@ pub async fn bootstrap(
     password: &str,
 ) -> Result<Uuid, String> {
     if username.trim() != username || username.is_empty() || username.len() > 64 {
-        return Err("无效用户名".into());
+        return Err(message::INVALID_USERNAME.into());
     }
     let hash = hash_password(password)?;
-    let mut tx = pool.begin().await.map_err(|_| "数据库错误")?;
-    guard(&mut tx).await.map_err(|_| "数据库错误")?;
+    let mut tx = pool.begin().await.map_err(|_| message::DATABASE_ERROR)?;
+    guard(&mut tx).await.map_err(|_| message::DATABASE_ERROR)?;
     let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users)")
         .fetch_one(&mut *tx)
         .await
-        .map_err(|_| "数据库错误")?;
+        .map_err(|_| message::DATABASE_ERROR)?;
     if exists {
-        return Err("初始化已关闭".into());
+        return Err(message::BOOTSTRAP_CLOSED.into());
     }
     let id = Uuid::new_v4();
-    sqlx::query("INSERT INTO users(id,username,display_name,password_hash,is_system_admin) VALUES($1,$2,$2,$3,true)").bind(id).bind(username).bind(hash).execute(&mut *tx).await.map_err(|_|"数据库错误")?;
+    sqlx::query("INSERT INTO users(id,username,display_name,password_hash,is_system_admin) VALUES($1,$2,$2,$3,true)").bind(id).bind(username).bind(hash).execute(&mut *tx).await.map_err(|_|message::DATABASE_ERROR)?;
     audit(
         &mut tx,
         Some(id),
-        "system.bootstrap",
+        audit_action::SYSTEM_BOOTSTRAP,
         Some(id),
         &Uuid::new_v4().to_string(),
         serde_json::json!({}),
     )
     .await
-    .map_err(|_| "数据库错误")?;
-    tx.commit().await.map_err(|_| "数据库错误")?;
+    .map_err(|_| message::DATABASE_ERROR)?;
+    tx.commit().await.map_err(|_| message::DATABASE_ERROR)?;
     Ok(id)
 }
 

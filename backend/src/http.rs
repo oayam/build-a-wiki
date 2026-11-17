@@ -1,7 +1,8 @@
+use crate::constants::{defaults, env, error_code, media_type, message, protocol};
 use axum::{
     Json, Router,
     extract::{Extension, Request, State},
-    http::{HeaderValue, StatusCode},
+    http::{HeaderValue, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::get,
@@ -28,26 +29,27 @@ impl Config {
         Self::parse(|k| std::env::var(k).ok())
     }
     pub fn parse(get: impl Fn(&str) -> Option<String>) -> Result<Self, String> {
-        if let Some(value) = get("UPLOAD_MAX_BYTES")
+        if let Some(value) = get(env::UPLOAD_MAX_BYTES)
             && !value
                 .parse::<u64>()
                 .is_ok_and(|n| (1..=1024 * 1024 * 1024).contains(&n))
         {
-            return Err("UPLOAD_MAX_BYTES must be 1..1073741824".into());
+            return Err(message::INVALID_UPLOAD_LIMIT.into());
         }
-        let database_url = get("DATABASE_URL")
+        let database_url = get(env::DATABASE_URL)
             .filter(|v| v.starts_with("postgres://") || v.starts_with("postgresql://"))
-            .ok_or("DATABASE_URL must be a PostgreSQL URL")?;
-        let bind_addr = get("BIND_ADDR")
-            .unwrap_or_else(|| "127.0.0.1:8080".into())
+            .ok_or(message::INVALID_DATABASE_URL)?;
+        let bind_addr = get(env::BIND_ADDR)
+            .unwrap_or_else(|| defaults::BIND_ADDR.into())
             .parse()
-            .map_err(|_| "invalid BIND_ADDR")?;
-        let attachment_dir = get("ATTACHMENT_DIR")
+            .map_err(|_| message::INVALID_BIND_ADDR)?;
+        let attachment_dir = get(env::ATTACHMENT_DIR)
             .filter(|s| !s.trim().is_empty())
-            .ok_or("ATTACHMENT_DIR required")?
+            .ok_or(message::ATTACHMENT_DIR_REQUIRED)?
             .into();
-        let log_level = get("LOG_LEVEL").unwrap_or_else(|| "info".into());
-        tracing_subscriber::EnvFilter::try_new(&log_level).map_err(|_| "invalid LOG_LEVEL")?;
+        let log_level = get(env::LOG_LEVEL).unwrap_or_else(|| defaults::LOG_LEVEL.into());
+        tracing_subscriber::EnvFilter::try_new(&log_level)
+            .map_err(|_| message::INVALID_LOG_LEVEL)?;
         Ok(Self {
             database_url,
             bind_addr,
@@ -84,7 +86,7 @@ pub(crate) fn error(status: StatusCode, code: &str, message: &str, id: &RequestI
 #[utoipa::path(get,path="/health/live",responses((status=200,description="进程存活",body=Health)))]
 pub async fn live() -> Json<Health> {
     Json(Health {
-        status: "ok".into(),
+        status: protocol::HEALTH_OK.into(),
     })
 }
 #[utoipa::path(get,path="/health/ready",responses((status=200,description="服务就绪",body=Health),(status=503,description="服务未就绪",body=ApiError)))]
@@ -124,25 +126,30 @@ pub async fn ready(State(state): State<AppState>, Extension(id): Extension<Reque
     };
     match tokio::time::timeout(std::time::Duration::from_secs(4), check).await {
         Ok(Ok(())) => Json(Health {
-            status: "ok".into(),
+            status: protocol::HEALTH_OK.into(),
         })
         .into_response(),
         _ => error(
             StatusCode::SERVICE_UNAVAILABLE,
-            "NOT_READY",
-            "服务尚未就绪",
+            error_code::NOT_READY,
+            message::NOT_READY,
             &id,
         ),
     }
 }
 async fn not_found(Extension(id): Extension<RequestId>) -> Response {
-    error(StatusCode::NOT_FOUND, "NOT_FOUND", "资源不存在", &id)
+    error(
+        StatusCode::NOT_FOUND,
+        error_code::NOT_FOUND,
+        message::NOT_FOUND,
+        &id,
+    )
 }
 async fn method_not_allowed(Extension(id): Extension<RequestId>) -> Response {
     error(
         StatusCode::METHOD_NOT_ALLOWED,
-        "METHOD_NOT_ALLOWED",
-        "请求方法不支持",
+        error_code::METHOD_NOT_ALLOWED,
+        message::METHOD_NOT_ALLOWED,
         &id,
     )
 }
@@ -155,18 +162,24 @@ async fn request_context(mut req: Request, next: Next) -> Response {
     if response.status().is_client_error()
         && !response
             .headers()
-            .get("content-type")
+            .get(header::CONTENT_TYPE)
             .and_then(|v| v.to_str().ok())
-            .is_some_and(|v| v.starts_with("application/json"))
+            .is_some_and(|v| v.starts_with(media_type::JSON))
     {
         let status = response.status();
-        response = error(status, "VALIDATION_ERROR", "请求格式无效", &id);
+        response = error(
+            status,
+            error_code::VALIDATION_ERROR,
+            message::INVALID_REQUEST,
+            &id,
+        );
     }
-    response
-        .headers_mut()
-        .insert("cache-control", HeaderValue::from_static("no-store"));
     response.headers_mut().insert(
-        "x-request-id",
+        header::CACHE_CONTROL,
+        HeaderValue::from_static(protocol::NO_STORE),
+    );
+    response.headers_mut().insert(
+        protocol::REQUEST_ID_HEADER,
         HeaderValue::from_str(&id.0).expect("UUID header"),
     );
     tracing::info!(request_id=%id.0,method=%method,status=response.status().as_u16(),elapsed_ms=start.elapsed().as_millis() as u64,"http request");

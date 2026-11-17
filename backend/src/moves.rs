@@ -1,3 +1,4 @@
+use crate::constants::{audit_action, error_code, message};
 use crate::{
     auth::*,
     http::{AppState, RequestId},
@@ -65,7 +66,12 @@ async fn plan(
     // Conservative snapshot invalidates previews after any authorization or same-library structure change.
     // Excludes password/session data; only its digest is returned to the client.
     let state:serde_json::Value=sqlx::query_scalar("SELECT jsonb_build_array((SELECT jsonb_agg(jsonb_build_array(id,parent_id,position,acl_mode,acl_version,lock_version,deleted_at) ORDER BY id) FROM pages WHERE knowledge_base_id=$1),(SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM knowledge_base_acl a),(SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM page_acl a),(SELECT jsonb_agg(jsonb_build_array(id,active,is_system_admin) ORDER BY id) FROM users),(SELECT jsonb_agg(to_jsonb(g) ORDER BY group_id,user_id) FROM group_members g),(SELECT jsonb_agg(jsonb_build_array(id,owner_id,acl_version) ORDER BY id) FROM knowledge_bases))").bind(k).fetch_one(&mut **tx).await?;
-    Ok(MovePreview{preview_token:fingerprint(&(u.id,p,v.parent_id,v.position,state)),affected_pages:nodes.len() as i64,inherited_pages:nodes.iter().filter(|n|n.3).count() as i64,notice:"继承权限的页面将采用目标位置的授权；独立授权边界及其后代保持原授权。移动不改变页面网址和历史版本。".into()})
+    Ok(MovePreview {
+        preview_token: fingerprint(&(u.id, p, v.parent_id, v.position, state)),
+        affected_pages: nodes.len() as i64,
+        inherited_pages: nodes.iter().filter(|n| n.3).count() as i64,
+        notice: message::MOVE_PERMISSION_NOTICE.into(),
+    })
 }
 #[utoipa::path(post,operation_id="preview_move",path="/api/v1/pages/{id}/move-preview",request_body=MoveInput,responses((status=200,body=MovePreview)))]
 pub async fn preview(
@@ -94,7 +100,7 @@ pub async fn execute(
     Path(p): Path<Uuid>,
     Json(v): Json<MoveInput>,
 ) -> Response {
-    response(async{let(mut tx,u)=transaction(&s,&h,true).await?;let result=plan(&mut tx,&u,p,&v).await?;if v.preview_token.as_deref()!=Some(&result.preview_token){return Err(conflict("MOVE_CONFLICT","结构或权限已变化，请重新预览"));}sqlx::query("UPDATE pages SET parent_id=$2,position=$3,lock_version=lock_version+1,updated_at=now() WHERE id=$1").bind(p).bind(v.parent_id).bind(v.position).execute(&mut *tx).await?;audit(&mut tx,Some(u.id),"pages.move",Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(result)}.await,&id)
+    response(async{let(mut tx,u)=transaction(&s,&h,true).await?;let result=plan(&mut tx,&u,p,&v).await?;if v.preview_token.as_deref()!=Some(&result.preview_token){return Err(conflict(error_code::MOVE_CONFLICT,message::MOVE_CONFLICT));}sqlx::query("UPDATE pages SET parent_id=$2,position=$3,lock_version=lock_version+1,updated_at=now() WHERE id=$1").bind(p).bind(v.parent_id).bind(v.position).execute(&mut *tx).await?;audit(&mut tx,Some(u.id),audit_action::PAGES_MOVE,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(result)}.await,&id)
 }
 pub fn routes() -> Router<AppState> {
     Router::new()

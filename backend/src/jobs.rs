@@ -1,3 +1,4 @@
+use crate::constants::{attachment_status, job_kind, message};
 use sqlx::{Postgres, Transaction};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
@@ -12,9 +13,10 @@ pub async fn enqueue(
     Ok(())
 }
 pub fn file_path(root: &Path, key: &str) -> std::io::Result<PathBuf> {
-    let id = Uuid::parse_str(key).map_err(|_| std::io::Error::other("invalid storage key"))?;
+    let id =
+        Uuid::parse_str(key).map_err(|_| std::io::Error::other(message::INVALID_STORAGE_KEY))?;
     if id.to_string() != key {
-        return Err(std::io::Error::other("invalid storage key"));
+        return Err(std::io::Error::other(message::INVALID_STORAGE_KEY));
     }
     Ok(root.join(key))
 }
@@ -42,8 +44,8 @@ pub async fn tick(pool: &sqlx::PgPool, root: &Path) -> Result<bool, sqlx::Error>
     // Manual retries cannot bypass upload grace time or trash retention.
     if let Some(resource) = payload["id"].as_str().and_then(|s| Uuid::parse_str(s).ok()) {
         let wait=match kind.as_str(){
-            "expire_upload"=>sqlx::query_scalar::<_,f64>("SELECT extract(epoch FROM created_at+interval '1 hour'-now())::float8 FROM attachments WHERE id=$1 AND status='pending' AND created_at>now()-interval '1 hour'").bind(resource).fetch_optional(&mut *tx).await?,
-            "purge_batch"=>sqlx::query_scalar::<_,f64>("SELECT extract(epoch FROM max(deleted_at)+interval '30 days'-now())::float8 FROM pages WHERE deletion_batch_id=$1 HAVING max(deleted_at)>now()-interval '30 days'").bind(resource).fetch_optional(&mut *tx).await?,
+            job_kind::EXPIRE_UPLOAD=>sqlx::query_scalar::<_,f64>("SELECT extract(epoch FROM created_at+interval '1 hour'-now())::float8 FROM attachments WHERE id=$1 AND status='pending' AND created_at>now()-interval '1 hour'").bind(resource).fetch_optional(&mut *tx).await?,
+            job_kind::PURGE_BATCH=>sqlx::query_scalar::<_,f64>("SELECT extract(epoch FROM max(deleted_at)+interval '30 days'-now())::float8 FROM pages WHERE deletion_batch_id=$1 HAVING max(deleted_at)>now()-interval '30 days'").bind(resource).fetch_optional(&mut *tx).await?,
             _=>None,
         };
         if let Some(wait) = wait {
@@ -60,17 +62,17 @@ pub async fn tick(pool: &sqlx::PgPool, root: &Path) -> Result<bool, sqlx::Error>
         .execute(&mut *tx)
         .await?;
     let result = match kind.as_str() {
-        "remove_file" => remove(root, payload["key"].as_str().unwrap_or("")).await,
-        "purge_batch" => {
+        job_kind::REMOVE_FILE => remove(root, payload["key"].as_str().unwrap_or("")).await,
+        job_kind::PURGE_BATCH => {
             if let Some(b) = payload["id"].as_str().and_then(|v| Uuid::parse_str(v).ok()) {
                 crate::trash::purge(&mut tx, b)
                     .await
-                    .map_err(|_| std::io::Error::other("purge failed"))
+                    .map_err(|_| std::io::Error::other(message::PURGE_FAILED))
             } else {
-                Err(std::io::Error::other("invalid batch"))
+                Err(std::io::Error::other(message::INVALID_BATCH))
             }
         }
-        "expire_upload" => {
+        job_kind::EXPIRE_UPLOAD => {
             let a = payload["id"].as_str().and_then(|v| Uuid::parse_str(v).ok());
             if let Some(a) = a {
                 let row: Option<(String, String)> = sqlx::query_as(
@@ -80,7 +82,7 @@ pub async fn tick(pool: &sqlx::PgPool, root: &Path) -> Result<bool, sqlx::Error>
                 .fetch_optional(&mut *tx)
                 .await?;
                 if let Some((key, status)) = row {
-                    if status == "pending" {
+                    if status == attachment_status::PENDING {
                         let r = remove(root, &key).await;
                         if r.is_ok() {
                             sqlx::query("DELETE FROM attachments WHERE id=$1")
@@ -96,10 +98,10 @@ pub async fn tick(pool: &sqlx::PgPool, root: &Path) -> Result<bool, sqlx::Error>
                     Ok(())
                 }
             } else {
-                Err(std::io::Error::other("invalid upload job"))
+                Err(std::io::Error::other(message::INVALID_UPLOAD_JOB))
             }
         }
-        _ => Err(std::io::Error::other("unsupported job")),
+        _ => Err(std::io::Error::other(message::UNSUPPORTED_JOB)),
     };
     match result {
         Ok(()) => {

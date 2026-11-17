@@ -1,3 +1,4 @@
+use crate::constants::{audit_action, error_code, job_kind, message};
 use crate::{
     auth::*,
     http::{AppState, RequestId},
@@ -86,7 +87,7 @@ pub async fn delete(
     Path(p): Path<Uuid>,
     Json(v): Json<DeleteInput>,
 ) -> Response {
-    response(async{let(mut tx,u)=transaction(&s,&h,true).await?;let(nodes,preview)=preview_tx(&mut tx,&u,p).await?;if preview.preview_token!=v.preview_token{return Err(conflict("STRUCTURE_CONFLICT","子树已变化，请重新预览"));}let batch=Uuid::new_v4();sqlx::query("INSERT INTO deletion_batches(id,root_id,deleted_by) VALUES($1,$2,$3)").bind(batch).bind(p).bind(u.id).execute(&mut *tx).await?;sqlx::query("UPDATE pages SET deleted_at=now(),deletion_batch_id=$1,lock_version=lock_version+1 WHERE id=ANY($2)").bind(batch).bind(&nodes).execute(&mut *tx).await?;jobs::enqueue(&mut tx,"purge_batch",&format!("purge:{batch}"),serde_json::json!({"id":batch}),30*86400).await?;audit(&mut tx,Some(u.id),"pages.delete",Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(serde_json::json!({"batch_id":batch}))}.await,&id)
+    response(async{let(mut tx,u)=transaction(&s,&h,true).await?;let(nodes,preview)=preview_tx(&mut tx,&u,p).await?;if preview.preview_token!=v.preview_token{return Err(conflict(error_code::STRUCTURE_CONFLICT,message::STRUCTURE_CONFLICT));}let batch=Uuid::new_v4();sqlx::query("INSERT INTO deletion_batches(id,root_id,deleted_by) VALUES($1,$2,$3)").bind(batch).bind(p).bind(u.id).execute(&mut *tx).await?;sqlx::query("UPDATE pages SET deleted_at=now(),deletion_batch_id=$1,lock_version=lock_version+1 WHERE id=ANY($2)").bind(batch).bind(&nodes).execute(&mut *tx).await?;jobs::enqueue(&mut tx,job_kind::PURGE_BATCH,&format!("purge:{batch}"),serde_json::json!({"id":batch}),30*86400).await?;audit(&mut tx,Some(u.id),audit_action::PAGES_DELETE,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(serde_json::json!({"batch_id":batch}))}.await,&id)
 }
 #[utoipa::path(get,operation_id="list_trash",path="/api/v1/trash",params(("cursor"=Option<Uuid>,Query)),responses((status=200,body=TrashList)))]
 pub async fn list(
@@ -109,7 +110,7 @@ pub async fn restore(
  sqlx::query("SELECT id FROM knowledge_bases WHERE id=$1 FOR UPDATE").bind(k).execute(&mut *tx).await?;
  let depth=if let Some(parent)=v.parent_id{require(&mut tx,&u,parent,true,2).await?;let same:bool=sqlx::query_scalar("SELECT knowledge_base_id=$2 FROM pages WHERE id=$1").bind(parent).bind(k).fetch_one(&mut *tx).await?;if !same{return Err(invalid());}sqlx::query_scalar::<_,i32>("WITH RECURSIVE a AS(SELECT id,parent_id,1 d FROM pages WHERE id=$1 UNION ALL SELECT p.id,p.parent_id,a.d+1 FROM pages p JOIN a ON a.parent_id=p.id WHERE a.d<65) SELECT max(d) FROM a").bind(parent).fetch_one(&mut *tx).await?}else{require(&mut tx,&u,k,false,2).await?;0};
  let height:i32=sqlx::query_scalar("WITH RECURSIVE s AS(SELECT id,1 d FROM pages WHERE id=$1 UNION ALL SELECT p.id,s.d+1 FROM pages p JOIN s ON p.parent_id=s.id WHERE p.deletion_batch_id=$2 AND s.d<65) SELECT max(d) FROM s").bind(p).bind(b).fetch_one(&mut *tx).await?;if depth+height>64{return Err(invalid());}
- sqlx::query("UPDATE pages SET parent_id=$2 WHERE id=$1").bind(p).bind(v.parent_id).execute(&mut *tx).await?;sqlx::query("UPDATE pages SET deleted_at=NULL,deletion_batch_id=NULL,lock_version=lock_version+1 WHERE deletion_batch_id=$1").bind(b).execute(&mut *tx).await?;sqlx::query("DELETE FROM deletion_batches WHERE id=$1").bind(b).execute(&mut *tx).await?;audit(&mut tx,Some(u.id),"pages.restore",Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(serde_json::json!({"ok":true}))}.await,&id)
+ sqlx::query("UPDATE pages SET parent_id=$2 WHERE id=$1").bind(p).bind(v.parent_id).execute(&mut *tx).await?;sqlx::query("UPDATE pages SET deleted_at=NULL,deletion_batch_id=NULL,lock_version=lock_version+1 WHERE deletion_batch_id=$1").bind(b).execute(&mut *tx).await?;sqlx::query("DELETE FROM deletion_batches WHERE id=$1").bind(b).execute(&mut *tx).await?;audit(&mut tx,Some(u.id),audit_action::PAGES_RESTORE,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(serde_json::json!({"ok":true}))}.await,&id)
 }
 /// Called with the global write barrier held by the worker.
 pub async fn purge(tx: &mut Transaction<'_, Postgres>, batch: Uuid) -> Result<()> {
@@ -125,7 +126,7 @@ pub async fn purge(tx: &mut Transaction<'_, Postgres>, batch: Uuid) -> Result<()
     for key in files {
         jobs::enqueue(
             tx,
-            "remove_file",
+            job_kind::REMOVE_FILE,
             &format!("remove:{key}"),
             serde_json::json!({"key":key}),
             0,
@@ -165,7 +166,7 @@ pub async fn purge(tx: &mut Transaction<'_, Postgres>, batch: Uuid) -> Result<()
     audit(
         tx,
         None,
-        "pages.purge",
+        audit_action::PAGES_PURGE,
         Some(batch),
         &Uuid::new_v4().to_string(),
         serde_json::json!({}),

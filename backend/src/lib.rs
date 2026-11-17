@@ -30,3 +30,5 @@ pub mod trash;
 
 pub mod operations;
 pub mod search;
+
+pub mod constants;

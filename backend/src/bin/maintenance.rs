@@ -1,7 +1,8 @@
+use wiki_api::constants::{audit_action, env};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mode = std::env::args().nth(1).ok_or("use on|off|status")?;
-    let pool = wiki_api::pool(&std::env::var("DATABASE_URL")?).await?;
+    let pool = wiki_api::pool(&std::env::var(env::DATABASE_URL)?).await?;
     let mut tx = pool.begin().await?;
     wiki_api::identity::guard(&mut tx).await?;
     let old: bool = sqlx::query_scalar("SELECT maintenance FROM auth_guard WHERE id=1")
@@ -16,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             wiki_api::identity::audit(
                 &mut tx,
                 None,
-                "system.maintenance",
+                audit_action::SYSTEM_MAINTENANCE,
                 None,
                 &uuid::Uuid::new_v4().to_string(),
                 serde_json::json!({}),

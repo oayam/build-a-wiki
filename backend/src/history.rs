@@ -1,3 +1,4 @@
+use crate::constants::{audit_action, error_code, message};
 use crate::{
     auth::*,
     http::{AppState, RequestId},
@@ -70,7 +71,7 @@ pub async fn read(
     h: HeaderMap,
     Path((p, r)): Path<(Uuid, Uuid)>,
 ) -> Response {
-    response(async{let(mut tx,u)=transaction(&s,&h,false).await?;require(&mut tx,&u,p,true,1).await?;let rev=sqlx::query_as::<_,Revision>("SELECT id,revision_no,title,schema_version,body_json body,body_text,editor_id,restored_from_revision_id FROM page_revisions WHERE page_id=$1 AND id=$2").bind(p).bind(r).fetch_optional(&mut *tx).await?.ok_or_else(missing)?;if u.is_system_admin{audit(&mut tx,Some(u.id),"revisions.admin_read",Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;}Ok(rev)}.await,&id)
+    response(async{let(mut tx,u)=transaction(&s,&h,false).await?;require(&mut tx,&u,p,true,1).await?;let rev=sqlx::query_as::<_,Revision>("SELECT id,revision_no,title,schema_version,body_json body,body_text,editor_id,restored_from_revision_id FROM page_revisions WHERE page_id=$1 AND id=$2").bind(p).bind(r).fetch_optional(&mut *tx).await?.ok_or_else(missing)?;if u.is_system_admin{audit(&mut tx,Some(u.id),audit_action::REVISIONS_ADMIN_READ,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;}Ok(rev)}.await,&id)
 }
 #[utoipa::path(post,operation_id="restore_revision",path="/api/v1/pages/{id}/restore-revision",request_body=Restore,responses((status=200,body=Saved),(status=409,body=crate::http::ApiError)))]
 pub async fn restore(
@@ -81,8 +82,8 @@ pub async fn restore(
     Json(v): Json<Restore>,
 ) -> Response {
     response(async{let(mut tx,u)=transaction(&s,&h,true).await?;let(_,current,_)=lock_page(&mut tx,&u,p,2).await?;let scope=format!("restore:{p}");let hash=fingerprint(&v);if let Some(result)=replay(&mut tx,u.id,&scope,v.request_id,&hash).await?{return Ok(result);}
- if current!=v.base_revision_id{return Err(conflict("REVISION_CONFLICT","恢复前页面已更新，请重新查看历史"));}
- let source:Option<(String,i32,serde_json::Value)>=sqlx::query_as("SELECT title,schema_version,body_json FROM page_revisions WHERE page_id=$1 AND id=$2").bind(p).bind(v.revision_id).fetch_optional(&mut *tx).await?;let(title,schema_version,body)=source.ok_or_else(missing)?;let value=Content{title,schema_version,body};let text=content(&value)?;let saved=append(&mut tx,&u,p,&value,&text,"恢复历史版本",Some(v.revision_id)).await?;let result=serde_json::to_value(saved).unwrap();remember(&mut tx,u.id,&scope,v.request_id,&hash,&result).await?;audit(&mut tx,Some(u.id),"revisions.restore",Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(result)}.await,&id)
+ if current!=v.base_revision_id{return Err(conflict(error_code::REVISION_CONFLICT,message::RESTORE_CONFLICT));}
+ let source:Option<(String,i32,serde_json::Value)>=sqlx::query_as("SELECT title,schema_version,body_json FROM page_revisions WHERE page_id=$1 AND id=$2").bind(p).bind(v.revision_id).fetch_optional(&mut *tx).await?;let(title,schema_version,body)=source.ok_or_else(missing)?;let value=Content{title,schema_version,body};let text=content(&value)?;let saved=append(&mut tx,&u,p,&value,&text,message::RESTORE_REVISION,Some(v.revision_id)).await?;let result=serde_json::to_value(saved).unwrap();remember(&mut tx,u.id,&scope,v.request_id,&hash,&result).await?;audit(&mut tx,Some(u.id),audit_action::REVISIONS_RESTORE,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(result)}.await,&id)
 }
 pub fn routes() -> Router<AppState> {
     Router::new()

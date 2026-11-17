@@ -1,3 +1,4 @@
+use crate::constants::{error_code, message};
 use crate::{
     auth::*,
     http::{AppState, RequestId},
@@ -58,7 +59,7 @@ pub async fn write(
     Json(v): Json<DraftInput>,
 ) -> Response {
     response(async{content(&v.content)?;let(mut tx,u)=transaction(&s,&h,true).await?;crate::pages::lock_page(&mut tx,&u,p,2).await?;
- let current:Option<i64>=sqlx::query_scalar("SELECT draft_version FROM page_drafts WHERE page_id=$1 AND user_id=$2").bind(p).bind(u.id).fetch_optional(&mut *tx).await?;if current.unwrap_or(0)!=v.draft_version{return Err(conflict("DRAFT_CONFLICT","草稿已在其他窗口更新，请先复制本地内容再重新加载"));}
+ let current:Option<i64>=sqlx::query_scalar("SELECT draft_version FROM page_drafts WHERE page_id=$1 AND user_id=$2").bind(p).bind(u.id).fetch_optional(&mut *tx).await?;if current.unwrap_or(0)!=v.draft_version{return Err(conflict(error_code::DRAFT_CONFLICT,message::DRAFT_WRITE_CONFLICT));}
  sqlx::query("INSERT INTO page_drafts(page_id,user_id,base_revision_id,title,schema_version,body_json,draft_version) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(page_id,user_id) DO UPDATE SET base_revision_id=$3,title=$4,schema_version=$5,body_json=$6,draft_version=$7,discarded=false,updated_at=now()").bind(p).bind(u.id).bind(v.base_revision_id).bind(&v.content.title).bind(v.content.schema_version).bind(&v.content.body).bind(v.draft_version+1).execute(&mut *tx).await?;tx.commit().await?;Ok(DraftState{draft:Some(Draft{base_revision_id:v.base_revision_id,title:v.content.title,schema_version:v.content.schema_version,body:v.content.body}),draft_version:v.draft_version+1})}.await,&id)
 }
 #[utoipa::path(delete,operation_id="delete_draft",path="/api/v1/pages/{id}/draft",params(("draft_version"=i64,Query)),responses((status=200,body=DraftState),(status=409,body=crate::http::ApiError)))]
@@ -69,7 +70,7 @@ pub async fn delete(
     Path(p): Path<Uuid>,
     Query(v): Query<DraftQuery>,
 ) -> Response {
-    response(async{let(mut tx,u)=transaction(&s,&h,true).await?;crate::pages::lock_page(&mut tx,&u,p,2).await?;let current:Option<i64>=sqlx::query_scalar("SELECT draft_version FROM page_drafts WHERE page_id=$1 AND user_id=$2").bind(p).bind(u.id).fetch_optional(&mut *tx).await?;if current.unwrap_or(0)!=v.draft_version{return Err(conflict("DRAFT_CONFLICT","草稿已更新，不能丢弃其他窗口的内容"));}
+    response(async{let(mut tx,u)=transaction(&s,&h,true).await?;crate::pages::lock_page(&mut tx,&u,p,2).await?;let current:Option<i64>=sqlx::query_scalar("SELECT draft_version FROM page_drafts WHERE page_id=$1 AND user_id=$2").bind(p).bind(u.id).fetch_optional(&mut *tx).await?;if current.unwrap_or(0)!=v.draft_version{return Err(conflict(error_code::DRAFT_CONFLICT,message::DRAFT_DELETE_CONFLICT));}
  sqlx::query("INSERT INTO page_drafts(page_id,user_id,draft_version,discarded) VALUES($1,$2,$3,true) ON CONFLICT(page_id,user_id) DO UPDATE SET title=NULL,body_json=NULL,base_revision_id=NULL,schema_version=NULL,discarded=true,draft_version=$3,updated_at=now()").bind(p).bind(u.id).bind(v.draft_version+1).execute(&mut *tx).await?;tx.commit().await?;Ok(DraftState{draft:None,draft_version:v.draft_version+1})}.await,&id)
 }
 pub fn routes() -> Router<AppState> {

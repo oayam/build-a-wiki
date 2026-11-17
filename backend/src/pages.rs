@@ -1,3 +1,4 @@
+use crate::constants::{audit_action, error_code, message};
 use crate::{
     auth::*,
     body,
@@ -114,8 +115,8 @@ pub async fn replay(
     match result {
         Some((h, value)) if h == hash => Ok(Some(value)),
         Some(_) => Err(conflict(
-            "IDEMPOTENCY_CONFLICT",
-            "同一请求标识不能用于不同内容",
+            error_code::IDEMPOTENCY_CONFLICT,
+            message::PAGE_IDEMPOTENCY_CONFLICT,
         )),
         None => Ok(None),
     }
@@ -196,7 +197,7 @@ pub async fn create(
  sqlx::query("SELECT id FROM knowledge_bases WHERE id=$1 FOR UPDATE").bind(k).execute(&mut *tx).await?;
  let scope=format!("create-page:{k}");let hash=fingerprint(&v);if let Some(r)=replay(&mut tx,u.id,&scope,v.request_id,&hash).await?{return Ok(r);}
  let p=Uuid::new_v4();sqlx::query("INSERT INTO pages(id,knowledge_base_id,parent_id,title,created_by,position) VALUES($1,$2,$3,$4,$5,COALESCE((SELECT max(position)+1 FROM pages WHERE knowledge_base_id=$2 AND parent_id IS NOT DISTINCT FROM $3),0))").bind(p).bind(k).bind(v.parent_id).bind(&v.content.title).bind(u.id).execute(&mut *tx).await?;
- let saved=append(&mut tx,&u,p,&v.content,&text,"创建页面",None).await?;let value=serde_json::to_value(saved).unwrap();remember(&mut tx,u.id,&scope,v.request_id,&hash,&value).await?;audit(&mut tx,Some(u.id),"pages.create",Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(value)
+ let saved=append(&mut tx,&u,p,&v.content,&text,message::CREATE_PAGE,None).await?;let value=serde_json::to_value(saved).unwrap();remember(&mut tx,u.id,&scope,v.request_id,&hash,&value).await?;audit(&mut tx,Some(u.id),audit_action::PAGES_CREATE,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(value)
  }.await,&id)
 }
 #[utoipa::path(get,path="/api/v1/knowledge-bases/{id}/pages",params(("parent_id"=Option<Uuid>,Query),("limit"=Option<i64>,Query),("cursor"=Option<Uuid>,Query)),responses((status=200,body=PageList)))]
@@ -226,7 +227,7 @@ pub async fn read(
  let(mut tx,u)=transaction(&s,&h,false).await?;require(&mut tx,&u,p,true,1).await?;
  let page=sqlx::query_as::<_,Page>("SELECT p.id,p.knowledge_base_id,CASE WHEN page_role($1,p.parent_id)>0 THEN p.parent_id ELSE NULL END parent_id,p.title,p.current_revision_id,r.schema_version,r.body_json body,r.body_text,page_role($1,p.id) role,p.lock_version,r.editor_id FROM pages p JOIN page_revisions r ON r.id=p.current_revision_id WHERE p.id=$2").bind(u.id).bind(p).fetch_one(&mut *tx).await?;
  let breadcrumbs=sqlx::query_as::<_,PageLink>("WITH RECURSIVE a AS(SELECT id,parent_id,title,0 depth FROM pages WHERE id=$1 UNION ALL SELECT p.id,p.parent_id,p.title,a.depth+1 FROM pages p JOIN a ON p.id=a.parent_id WHERE a.depth<64) SELECT id,title FROM a WHERE page_role($2,id)>0 ORDER BY depth DESC").bind(p).bind(u.id).fetch_all(&mut *tx).await?;
- if u.is_system_admin{audit(&mut tx,Some(u.id),"pages.admin_read",Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;}
+ if u.is_system_admin{audit(&mut tx,Some(u.id),audit_action::PAGES_ADMIN_READ,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;}
  Ok(PageDetail{page,breadcrumbs})
  }.await,&id)
 }
@@ -253,8 +254,8 @@ pub async fn save(
             }
             if current != v.base_revision_id {
                 return Err(conflict(
-                    "REVISION_CONFLICT",
-                    "页面已被其他成员更新，本地内容已保留",
+                    error_code::REVISION_CONFLICT,
+                    message::REVISION_CONFLICT,
                 ));
             }
             let saved = append(
@@ -272,7 +273,7 @@ pub async fn save(
             audit(
                 &mut tx,
                 Some(u.id),
-                "pages.save",
+                audit_action::PAGES_SAVE,
                 Some(p),
                 &id.0,
                 serde_json::json!({}),

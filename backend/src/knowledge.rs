@@ -1,3 +1,4 @@
+use crate::constants::{acl_mode, audit_action, error_code, message};
 use crate::{
     admin::text,
     auth::*,
@@ -105,7 +106,7 @@ pub async fn create(
             audit(
                 &mut tx,
                 Some(u.id),
-                "knowledge_bases.create",
+                audit_action::KNOWLEDGE_BASES_CREATE,
                 Some(k),
                 &id.0,
                 serde_json::json!({}),
@@ -131,7 +132,7 @@ pub async fn detail(
     h: HeaderMap,
     Path(k): Path<Uuid>,
 ) -> Response {
-    response(async{let(mut tx,u)=transaction(&s,&h,false).await?;require(&mut tx,&u,k,false,1).await?;let row=sqlx::query_as::<_,KnowledgeBase>("SELECT id,name,owner_id,acl_version,kb_role($1,id) AS role FROM knowledge_bases WHERE id=$2").bind(u.id).bind(k).fetch_one(&mut *tx).await?;if u.is_system_admin{audit(&mut tx,Some(u.id),"knowledge_bases.admin_read",Some(k),&id.0,serde_json::json!({})).await?;tx.commit().await?;}Ok(row)}.await,&id)
+    response(async{let(mut tx,u)=transaction(&s,&h,false).await?;require(&mut tx,&u,k,false,1).await?;let row=sqlx::query_as::<_,KnowledgeBase>("SELECT id,name,owner_id,acl_version,kb_role($1,id) AS role FROM knowledge_bases WHERE id=$2").bind(u.id).bind(k).fetch_one(&mut *tx).await?;if u.is_system_admin{audit(&mut tx,Some(u.id),audit_action::KNOWLEDGE_BASES_ADMIN_READ,Some(k),&id.0,serde_json::json!({})).await?;tx.commit().await?;}Ok(row)}.await,&id)
 }
 #[utoipa::path(patch,path="/api/v1/knowledge-bases/{id}",request_body=Name,responses((status=200,body=serde_json::Value)))]
 pub async fn rename(
@@ -154,7 +155,7 @@ pub async fn rename(
             audit(
                 &mut tx,
                 Some(u.id),
-                "knowledge_bases.rename",
+                audit_action::KNOWLEDGE_BASES_RENAME,
                 Some(k),
                 &id.0,
                 serde_json::json!({}),
@@ -205,7 +206,7 @@ pub async fn transfer(
             audit(
                 &mut tx,
                 Some(u.id),
-                "knowledge_bases.transfer",
+                audit_action::KNOWLEDGE_BASES_TRANSFER,
                 Some(k),
                 &id.0,
                 serde_json::json!({"owner_id":v.owner_id}),
@@ -227,17 +228,17 @@ async fn get_permissions(
 ) -> Response {
     response(async{
  let(mut tx,u)=transaction(&s,&h,false).await?;let role=require(&mut tx,&u,k,page,1).await?;
- let(mode,version):(String,i64)=if page{sqlx::query_as("SELECT acl_mode,acl_version FROM pages WHERE id=$1").bind(k).fetch_one(&mut *tx).await?}else{("independent".into(),sqlx::query_scalar("SELECT acl_version FROM knowledge_bases WHERE id=$1").bind(k).fetch_one(&mut *tx).await?)};
- let source=if u.is_system_admin {"系统管理员".to_owned()} else {
+ let(mode,version):(String,i64)=if page{sqlx::query_as("SELECT acl_mode,acl_version FROM pages WHERE id=$1").bind(k).fetch_one(&mut *tx).await?}else{(acl_mode::INDEPENDENT.into(),sqlx::query_scalar("SELECT acl_version FROM knowledge_bases WHERE id=$1").bind(k).fetch_one(&mut *tx).await?)};
+ let source=if u.is_system_admin {message::SYSTEM_ADMIN.to_owned()} else {
  let owner:Uuid=sqlx::query_scalar(if page {"SELECT k.owner_id FROM knowledge_bases k JOIN pages p ON p.knowledge_base_id=k.id WHERE p.id=$1"} else {"SELECT owner_id FROM knowledge_bases WHERE id=$1"}).bind(k).fetch_one(&mut *tx).await?;
- if owner==u.id {"知识库所有者".to_owned()} else if page {
+ if owner==u.id {message::KNOWLEDGE_BASE_OWNER.to_owned()} else if page {
  let boundary:Option<Uuid>=sqlx::query_scalar("WITH RECURSIVE chain AS (SELECT id,parent_id,acl_mode,0 depth FROM pages WHERE id=$1 UNION ALL SELECT p.id,p.parent_id,p.acl_mode,c.depth+1 FROM pages p JOIN chain c ON p.id=c.parent_id WHERE c.depth<64) SELECT id FROM chain WHERE acl_mode='independent' ORDER BY depth LIMIT 1").bind(k).fetch_optional(&mut *tx).await?;
- boundary.map(|id|format!("独立页面授权：{id}")).unwrap_or_else(||"知识库授权".into())
- } else {"知识库授权".into()}
+ boundary.map(|id|format!("独立页面授权：{id}")).unwrap_or_else(||message::KNOWLEDGE_BASE_PERMISSION.into())
+ } else {message::KNOWLEDGE_BASE_PERMISSION.into()}
  };
  let entries=if role>=3{Some(sqlx::query_as::<_,Entry>(if page{"SELECT user_id,group_id,role FROM page_acl WHERE page_id=$1 ORDER BY id"}else{"SELECT user_id,group_id,role FROM knowledge_base_acl WHERE knowledge_base_id=$1 ORDER BY id"}).bind(k).fetch_all(&mut *tx).await?)}else{None};
- if u.is_system_admin{audit(&mut tx,Some(u.id),"permissions.admin_read",Some(k),&id.0,serde_json::json!({})).await?;tx.commit().await?;}
- Ok(Permissions{role,source,inherited:page&&mode=="inherit",acl_mode:mode,acl_version:version,entries})
+ if u.is_system_admin{audit(&mut tx,Some(u.id),audit_action::PERMISSIONS_ADMIN_READ,Some(k),&id.0,serde_json::json!({})).await?;tx.commit().await?;}
+ Ok(Permissions{role,source,inherited:page&&mode==acl_mode::INHERIT,acl_mode:mode,acl_version:version,entries})
  }.await,&id)
 }
 async fn put_permissions(
@@ -250,14 +251,14 @@ async fn put_permissions(
 ) -> Response {
     response(async{
  let(mut tx,u)=transaction(&s,&h,true).await?;require(&mut tx,&u,k,page,3).await?;
- if v.entries.len()>100{return Err(invalid());}let mode=v.acl_mode.as_deref().unwrap_or("independent");if !matches!(mode,"inherit"|"independent")||(!page&&mode!="independent"){return Err(invalid());}
+ if v.entries.len()>100{return Err(invalid());}let mode=v.acl_mode.as_deref().unwrap_or(acl_mode::INDEPENDENT);if !matches!(mode,acl_mode::INHERIT|acl_mode::INDEPENDENT)||(!page&&mode!=acl_mode::INDEPENDENT){return Err(invalid());}
  let current:i64=sqlx::query_scalar(if page{"SELECT acl_version FROM pages WHERE id=$1 FOR UPDATE"}else{"SELECT acl_version FROM knowledge_bases WHERE id=$1 FOR UPDATE"}).bind(k).fetch_one(&mut *tx).await?;
- if current!=v.acl_version{return Err(Failure(StatusCode::CONFLICT,"ACL_CONFLICT","权限已被其他管理员修改，请重新加载"));}
+ if current!=v.acl_version{return Err(Failure(StatusCode::CONFLICT,error_code::ACL_CONFLICT,message::ACL_CONFLICT));}
  for e in &v.entries{if e.user_id.is_some()==e.group_id.is_some()||!(1..=3).contains(&e.role){return Err(invalid());}}
  sqlx::query(if page{"DELETE FROM page_acl WHERE page_id=$1"}else{"DELETE FROM knowledge_base_acl WHERE knowledge_base_id=$1"}).bind(k).execute(&mut *tx).await?;
  for e in v.entries{sqlx::query(if page{"INSERT INTO page_acl(id,page_id,user_id,group_id,role) VALUES($1,$2,$3,$4,$5)"}else{"INSERT INTO knowledge_base_acl(id,knowledge_base_id,user_id,group_id,role) VALUES($1,$2,$3,$4,$5)"}).bind(Uuid::new_v4()).bind(k).bind(e.user_id).bind(e.group_id).bind(e.role).execute(&mut *tx).await?;}
  if page{sqlx::query("UPDATE pages SET acl_mode=$2,acl_version=acl_version+1 WHERE id=$1").bind(k).bind(mode).execute(&mut *tx).await?;}else{sqlx::query("UPDATE knowledge_bases SET acl_version=acl_version+1 WHERE id=$1").bind(k).execute(&mut *tx).await?;}
- audit(&mut tx,Some(u.id),"permissions.update",Some(k),&id.0,serde_json::json!({"acl_version":current+1})).await?;tx.commit().await?;Ok(serde_json::json!({"acl_version":current+1}))
+ audit(&mut tx,Some(u.id),audit_action::PERMISSIONS_UPDATE,Some(k),&id.0,serde_json::json!({"acl_version":current+1})).await?;tx.commit().await?;Ok(serde_json::json!({"acl_version":current+1}))
  }.await,&id)
 }
 #[utoipa::path(get,path="/api/v1/knowledge-bases/{id}/permissions",responses((status=200,body=Permissions)))]
