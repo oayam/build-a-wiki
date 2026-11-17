@@ -1615,6 +1615,8 @@ summary:focus-visible {
 }
 
 .sidebar .library-tree {
+  --directory-focus-width: 2px;
+  --directory-focus-color: #4286f5;
   --directory-margin-scale: 0.9;
   --directory-indent-scale: 1.1;
   --directory-base-item-margin: 3px;
@@ -1632,4 +1634,10 @@ summary:focus-visible {
   padding-left: calc(
     var(--directory-base-indent) * var(--directory-indent-scale)
   );
+}
+
+.sidebar .library-tree-row > a:focus-visible,
+.sidebar .page-tree-row > a:focus-visible {
+  outline: var(--directory-focus-width) solid var(--directory-focus-color);
+  outline-offset: calc(-1 * var(--directory-focus-width));
 }

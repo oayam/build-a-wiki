@@ -187,3 +187,9 @@ docker compose --env-file .data/compose-test.env -p wiki-acceptance \
 ## 目录间距修正为 margin
 
 按最新要求撤销上一轮条目内边距、固定行高及图标缩放，恢复原 8px 上下 padding 和自然高度。相邻知识库/页面条目改用明确的 margin-top 控制，以已有目录列表 3px 间距为基准乘 0.9，得到 2.7px；列表上下 margin 同为 2.7px。层级缩进继续为 13.2px，比例和基准通过 CSS 自定义属性定义。生产构建及目录稳定性、响应式 UI 两项浏览器回归通过（25.1 秒），更新截图和本地镜像 `7bfb9d9929d1`，无新增依赖。
+
+## 目录标题焦点框尺寸修复
+
+截图 `bugreport/figure/bug-error-size-of-focus-item-size.png` 中的焦点框顶部缺失，原因是标题继承全局 2px outline 与向外 3px offset，合计外扩 5px，超过动画裁剪容器边缘仅约 2.7px 的留白。目录标题改为 2px 内描边（offset -2px），边框贴合链接点击区域，不改变行高、padding、margin 或键盘焦点语义。尺寸与颜色使用 CSS 自定义属性。
+
+实际浏览器修复前后对比确认标题高度保持 36px，焦点框偏移由 3px 变为 -2px，截图边框完整；目录专项回归通过（3.6 秒），生产构建通过。本地镜像 `78885c31f855`，无新增依赖。
