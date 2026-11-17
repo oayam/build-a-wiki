@@ -136,10 +136,17 @@ kbd {
   font-weight: 700;
 }
 .account .ant-btn {
+  --account-action-font-size: 14px;
+  --account-action-font-weight: 600;
   background: #ffffff12;
   color: white;
   border-color: #ffffff30;
-  font-size: 12px;
+  font-size: var(--account-action-font-size);
+  font-weight: var(--account-action-font-weight);
+}
+.account-name {
+  --account-name-font-weight: 600;
+  font-weight: var(--account-name-font-weight);
 }
 .sidebar {
   position: sticky;
