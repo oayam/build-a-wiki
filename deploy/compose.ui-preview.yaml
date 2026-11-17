@@ -1,0 +1,4 @@
+# Apply after compose.yaml to preview the UI redesign without replacing rc1 images.
+services:
+  gateway:
+    image: build-a-wiki-gateway:ui-refresh

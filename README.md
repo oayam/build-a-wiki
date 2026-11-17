@@ -2,6 +2,8 @@
 
 T0～T48：中文登录与账号/组管理、私有知识库和权限管理、页面树、富文本阅读编辑、个人草稿、共享版本与历史恢复、最近访问、页面移动排序。附件上传下载、回收站、搜索及人员筛选、审计与任务状态均已实现。生产部署和验证记录见 docs/OPERATIONS.md。
 
+前端已参照 `design/Build-a-Wiki主界面设计稿.png` 更新为蓝色知识库工作区，支持可折叠目录、全局搜索和响应式编辑页面。截图与本机预览说明见 [UI 改版记录](docs/UI_REDESIGN.md)。
+
 ## 本机开发
 
 环境版本见 dependency.txt 和 docs/TOOLCHAIN.md。安装 Rust 后将 `$HOME/.cargo/bin` 加入 PATH。

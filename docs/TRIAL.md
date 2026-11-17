@@ -4,6 +4,8 @@
 
 ## 本机候选实例
 
+前端已按 `design/Build-a-Wiki主界面设计稿.png` 改版，本机使用 `ui-refresh` 网关镜像；截图、验证和回退方法见 [UI_REDESIGN.md](UI_REDESIGN.md)。
+
 地址：https://127.0.0.1:18443（本机测试证书）。这是独立的`wiki-acceptance`容器项目，不使用wiki_dev数据库；原有mayao账号和开发内容保持不变。
 
 管理员用户名：root。随机密码位于工作区`.data/wiki-acceptance-password`（权限600，未纳入Git或离线包）。Windows PowerShell可通过以下命令读取本机文件：
@@ -29,8 +31,8 @@ wsl.exe -u root cat /root/build-A-wiki/.data/wiki-acceptance-password
 
 ```bash
 # 从仓库根目录执行；不删除卷。
-docker compose --env-file .data/compose-test.env -p wiki-acceptance -f deploy/compose.yaml stop
-docker compose --env-file .data/compose-test.env -p wiki-acceptance -f deploy/compose.yaml up -d --no-build --pull never
+docker compose --env-file .data/compose-test.env -p wiki-acceptance -f deploy/compose.yaml -f deploy/compose.ui-preview.yaml stop
+docker compose --env-file .data/compose-test.env -p wiki-acceptance -f deploy/compose.yaml -f deploy/compose.ui-preview.yaml up -d --no-build --pull never
 ```
 
 试用库已做一致备份，位于`.data/container-backup`。该目录是本机演练备份，尚未复制到独立机器，不能称为异地备份。生产发布前还需配置实际备份目的地与调度策略。
