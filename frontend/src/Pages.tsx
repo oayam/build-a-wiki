@@ -6,6 +6,7 @@ import type { JSONContent } from "@tiptap/core";
 import type { components } from "./api.generated";
 import { extensions } from "./editor";
 import { request, useSession } from "./session";
+import { useDraft } from "./useDraft";
 type Detail = components["schemas"]["PageDetail"];
 type List = components["schemas"]["PageList"];
 type Summary = components["schemas"]["PageSummary"];
@@ -154,7 +155,10 @@ export function PageScreen() {
     setData(undefined);
     setError("");
     void request<Detail>(`/pages/${id}`)
-      .then(setData)
+      .then((data) => {
+        setData(data);
+        void request(`/pages/${id}/visit`, "PUT").catch(() => {});
+      })
       .catch((e) => setError(e.message));
   }, [id]);
   return error ? (
@@ -178,6 +182,7 @@ function Document({
   const [title, setTitle] = React.useState(page.title);
   const [body, setBody] = React.useState<JSONContent>(page.body as JSONContent);
   const [dirty, setDirty] = React.useState(false);
+  const [base, setBase] = React.useState(page.current_revision_id);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [message, setMessage] = React.useState("");
@@ -196,7 +201,7 @@ function Document({
     },
   });
   React.useEffect(() => {
-    editor?.setEditable(editing && !preview);
+    editor?.setEditable(editing && !preview, false);
   }, [editor, editing, preview]);
   useBlocker(
     ({ currentLocation, nextLocation }) =>
@@ -215,6 +220,14 @@ function Document({
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
   const localKey = `wiki-local:${user.id}:${page.id}`;
+  const draft = useDraft(
+    page.id,
+    page.role >= 2,
+    editing,
+    dirty,
+    { title, body, schema_version: 1, base_revision_id: base },
+    localKey,
+  );
   React.useEffect(() => {
     if (dirty) {
       try {
@@ -223,7 +236,7 @@ function Document({
           JSON.stringify({
             title,
             body,
-            base_revision_id: page.current_revision_id,
+            base_revision_id: base,
           }),
         );
       } catch {
@@ -239,7 +252,7 @@ function Document({
       title,
       schema_version: 1,
       body,
-      base_revision_id: page.current_revision_id,
+      base_revision_id: base,
     };
     const fingerprint = JSON.stringify(value);
     if (retry.current?.fingerprint !== fingerprint)
@@ -253,6 +266,12 @@ function Document({
       sessionStorage.removeItem(localKey);
       const updated = await request<Detail>(`/pages/${page.id}`);
       onSaved(updated);
+      setBase(updated.current_revision_id);
+      try {
+        await draft.discard();
+      } catch (e) {
+        setError("共享版本已保存，但草稿清理失败：" + (e as Error).message);
+      }
       setMessage("共享版本已保存");
       setEditing(false);
       setLatest(undefined);
@@ -285,8 +304,17 @@ function Document({
       )}
       <Space wrap style={{ margin: "16px 0" }}>
         <Link to={`/pages/${page.id}/permissions`}>页面权限</Link>
+        <Link to={`/pages/${page.id}/history`}>版本历史</Link>
+        {page.role >= 3 && (
+          <Link to={`/pages/${page.id}/move`}>移动与排序</Link>
+        )}
         {page.role >= 2 && !editing && (
-          <Button onClick={() => setEditing(true)}>编辑页面</Button>
+          <Button
+            disabled={!draft.ready || !!draft.candidate}
+            onClick={() => setEditing(true)}
+          >
+            编辑页面
+          </Button>
         )}
         {editing && (
           <>
@@ -297,8 +325,15 @@ function Document({
               {preview ? "继续编辑" : "预览"}
             </Button>
             <Button
-              onClick={() => {
-                if (!dirty || confirm("放弃未保存内容？")) {
+              onClick={async () => {
+                if (!dirty || confirm("放弃未保存内容和个人草稿？")) {
+                  try {
+                    await draft.discard();
+                  } catch (e) {
+                    setError((e as Error).message);
+                    return;
+                  }
+                  setBase(page.current_revision_id);
                   setTitle(page.title);
                   setBody(page.body as JSONContent);
                   editor?.commands.setContent(page.body as JSONContent, {
@@ -369,7 +404,64 @@ function Document({
           </Button>
         </div>
       )}
+      {draft.candidate && (
+        <Alert
+          type="info"
+          message="发现未共享的个人草稿"
+          action={
+            <Space>
+              <Button
+                onClick={() => {
+                  const v = draft.restore();
+                  if (v) {
+                    setTitle(v.title);
+                    setBody(v.body as JSONContent);
+                    setBase(v.base_revision_id);
+                    editor?.commands.setContent(v.body as JSONContent, {
+                      emitUpdate: false,
+                    });
+                    setEditing(true);
+                    setDirty(true);
+                  }
+                }}
+              >
+                恢复个人草稿
+              </Button>
+              <Button
+                onClick={() => {
+                  if (confirm("永久丢弃个人草稿？"))
+                    void draft.discard().catch((e) => setError(e.message));
+                }}
+              >
+                放弃个人草稿
+              </Button>
+            </Space>
+          }
+        />
+      )}
       <EditorContent editor={editor} />
+      {editing && (
+        <>
+          <p role="status">{draft.status}</p>
+          <Button onClick={draft.retry}>重试草稿同步</Button>
+          <Button
+            onClick={() =>
+              void draft.reload().catch((e) => setError(e.message))
+            }
+          >
+            重新读取个人草稿
+          </Button>
+          <details>
+            <summary>复制本地内容</summary>
+            <textarea
+              aria-label="本地草稿副本"
+              readOnly
+              value={JSON.stringify({ title, body }, null, 2)}
+              style={{ width: "100%", height: 120 }}
+            />
+          </details>
+        </>
+      )}
       <p role="status">
         {busy ? "正在保存…" : dirty ? "有未保存的更改" : "内容已同步"}
       </p>
@@ -387,6 +479,7 @@ function Document({
           <Button
             onClick={() => {
               onSaved(latest);
+              setBase(latest.current_revision_id);
               setLatest(undefined);
               setError("");
               setDirty(true);

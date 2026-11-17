@@ -20,6 +20,9 @@ import { health } from "./api";
 import { zh } from "./locales/zh";
 import "./style.css";
 import { SessionGate, Account, useSession } from "./session";
+import Move from "./Move";
+import History from "./History";
+import Recent from "./Recent";
 import Users from "./Users";
 import { LibraryPages, PageScreen, SharedPages } from "./Pages";
 import { Libraries, PermissionPanel } from "./Knowledge";
@@ -130,11 +133,21 @@ function App() {
         </header>
         <main>
           <Routes>
-            <Route path="/" element={<Libraries />} />
+            <Route
+              path="/"
+              element={
+                <>
+                  <Libraries />
+                  <Recent />
+                </>
+              }
+            />
             <Route
               path="/knowledge-bases/:id/permissions"
               element={<PermissionPanel />}
             />
+            <Route path="/pages/:id/move" element={<Move />} />
+            <Route path="/pages/:id/history" element={<History />} />
             <Route path="/pages/:id" element={<PageScreen />} />
             <Route path="/knowledge-bases/:id" element={<LibraryPages />} />
             <Route

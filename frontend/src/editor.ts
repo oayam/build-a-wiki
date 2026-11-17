@@ -22,5 +22,7 @@ export function roundTrip(body: JSONContent) {
 export function plainText(body: JSONContent) {
   const node = schema.nodeFromJSON(body);
   node.check();
-  return node.textBetween(0, node.content.size, "\n");
+  return node.textBetween(0, node.content.size, "\n", (leaf) =>
+    leaf.type.name === "hardBreak" ? "\n" : "",
+  );
 }
