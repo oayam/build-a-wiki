@@ -17,3 +17,6 @@ frontend/test-results/
 frontend/playwright-report/
 __pycache__/
 *.pyc
+
+# Local bug reports
+/bugreport/
