@@ -1,5 +1,10 @@
 import Attachments from "./Attachments";
 import React from "react";
+import {
+  isPlainTreeClick,
+  toggleTreeNode,
+  expandTreeNode,
+} from "./treeNavigation";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Icon from "./Icon";
 import EditorToolbar from "./EditorToolbar";
@@ -10,6 +15,7 @@ import {
   Link,
   NavLink,
   useParams,
+  useLocation,
   useNavigate,
   useBlocker,
 } from "react-router-dom";
@@ -40,6 +46,7 @@ export function PageTree({
 }) {
   const { user } = useSession();
   const [open, setOpen] = React.useState<string[]>(ancestors);
+  const location = useLocation();
   const query = useInfiniteQuery({
     queryKey: ["navigation", user.id, "tree", kb, parent ?? null],
     initialPageParam: undefined as string | undefined,
@@ -113,6 +120,20 @@ export function PageTree({
                   end
                   aria-label={navigation ? `打开页面：${p.title}` : undefined}
                   title={p.title}
+                  onClick={(event) => {
+                    if (
+                      !navigation ||
+                      !p.has_children ||
+                      !isPlainTreeClick(event)
+                    )
+                      return;
+                    if (location.pathname === `/pages/${p.id}`) {
+                      event.preventDefault();
+                      setOpen((old) => toggleTreeNode(old, p.id));
+                    } else {
+                      setOpen((old) => expandTreeNode(old, p.id));
+                    }
+                  }}
                 >
                   <Icon name={p.has_children ? "folder" : "file"} />
                   <span>{p.title}</span>

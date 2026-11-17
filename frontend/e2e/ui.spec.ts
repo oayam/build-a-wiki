@@ -118,12 +118,63 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
       exact: true,
     }),
   ).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("link", { name: "版本历史", exact: true })).not.toBeVisible();
+  // Repeated title clicks toggle the current branch without re-navigation.
+  const libraryTitle = sidebar.getByRole("link", {
+    name: "打开知识库：产品协作知识库",
+    exact: true,
+  });
+  await libraryTitle.click();
+  await expect(page).toHaveURL(`/knowledge-bases/${ids.kb}`);
+  await libraryTitle.click();
+  await expect(
+    sidebar.getByRole("button", {
+      name: "展开知识库：产品协作知识库",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await libraryTitle.click();
+  await expect(
+    sidebar.getByRole("button", {
+      name: "收起知识库：产品协作知识库",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-expanded", "true");
+  const parentTitle = sidebar.getByRole("link", {
+    name: "打开页面：产品介绍",
+    exact: true,
+  });
+  await parentTitle.click();
+  await expect(
+    page.getByRole("heading", { name: "产品介绍", exact: true }),
+  ).toBeVisible();
+  await parentTitle.click();
+  await expect(
+    sidebar.getByRole("button", { name: "展开-产品介绍", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    sidebar.getByRole("link", { name: "打开页面：项目概述", exact: true }),
+  ).not.toBeVisible();
+  await parentTitle.press("Enter");
+  await expect(
+    sidebar.getByRole("button", { name: "收起-产品介绍", exact: true }),
+  ).toHaveAttribute("aria-expanded", "true");
+  await sidebar
+    .getByRole("link", { name: "打开页面：Build-a-Wiki 使用指南", exact: true })
+    .click();
+  await expect(
+    page.getByRole("link", { name: "版本历史", exact: true }),
+  ).not.toBeVisible();
   const settings = page.getByRole("button", { name: "页面设置", exact: true });
   await settings.click();
   const settingsDialog = page.getByRole("menu", { name: "页面设置" });
-  await expect(settingsDialog.getByRole("link", { name: "页面权限", exact: true })).toBeVisible();
-  await expect.poll(() => settingsDialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+  await expect(
+    settingsDialog.getByRole("link", { name: "页面权限", exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      settingsDialog.evaluate((node) => node.contains(document.activeElement)),
+    )
+    .toBe(true);
   await page.keyboard.press("Escape");
   await expect(settingsDialog).not.toBeVisible();
   await expect(settings).toBeFocused();
@@ -131,9 +182,13 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
   await expect(settingsDialog).toBeVisible();
   const triggerBox = await settings.boundingBox();
   const menuBox = await settingsDialog.boundingBox();
-  expect(Math.abs(menuBox!.x + menuBox!.width - triggerBox!.x - triggerBox!.width)).toBeLessThan(12);
+  expect(
+    Math.abs(menuBox!.x + menuBox!.width - triggerBox!.x - triggerBox!.width),
+  ).toBeLessThan(12);
   expect(menuBox!.y - triggerBox!.y - triggerBox!.height).toBeLessThan(16);
-  await page.getByRole("heading", { name: "Build-a-Wiki 使用指南", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Build-a-Wiki 使用指南", exact: true })
+    .click();
   await expect(settingsDialog).not.toBeVisible();
   await page.getByRole("button", { name: "编辑页面", exact: true }).click();
   await expect(page.getByRole("toolbar", { name: "正文格式" })).toBeVisible();

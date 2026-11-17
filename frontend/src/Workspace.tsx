@@ -1,4 +1,9 @@
 import React from "react";
+import {
+  isPlainTreeClick,
+  toggleTreeNode,
+  expandTreeNode,
+} from "./treeNavigation";
 import { useSidebarResize } from "./useSidebarResize";
 import { captureDialogTrigger } from "./useDialogFocusReturn";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -240,6 +245,15 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
                       to={`/knowledge-bases/${k.id}`}
                       aria-label={`打开知识库：${k.name}`}
                       title={k.name}
+                      onClick={(event) => {
+                        if (!isPlainTreeClick(event)) return;
+                        if (location.pathname === `/knowledge-bases/${k.id}`) {
+                          event.preventDefault();
+                          setOpen((old) => toggleTreeNode(old, k.id));
+                        } else {
+                          setOpen((old) => expandTreeNode(old, k.id));
+                        }
+                      }}
                     >
                       <Icon name="folder" /> <span>{k.name}</span>
                     </Link>
