@@ -1,4 +1,5 @@
 import React from "react";
+import { useReducedMotion, notifyCreatedNode } from "./Motion";
 import { Alert, Form, Input, Modal } from "antd";
 import { useNavigate } from "react-router-dom";
 import { request } from "./session";
@@ -12,6 +13,12 @@ export default function CreatePageDialog({
   onClose: () => void;
 }) {
   const [form] = Form.useForm();
+  const reduced = useReducedMotion();
+  const close = () => {
+    if (reduced) onClose();
+    else setVisible(false);
+  };
+  const [visible, setVisible] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const attempt = React.useRef<{ title: string; id: string } | undefined>(
@@ -37,7 +44,8 @@ export default function CreatePageDialog({
           body: { type: "doc", content: [{ type: "paragraph" }] },
         },
       );
-      onClose();
+      close();
+      notifyCreatedNode(saved.id, "page");
       navigate(`/pages/${saved.id}`);
     } catch (e) {
       setError((e as Error).message);
@@ -47,7 +55,10 @@ export default function CreatePageDialog({
   }
   return (
     <Modal
-      open
+      open={visible}
+      afterClose={onClose}
+      transitionName="wiki-dialog"
+      maskTransitionName="wiki-mask"
       title={target.parent ? "创建子页面" : "创建页面"}
       okText="确认创建"
       cancelText="取消"
@@ -57,7 +68,7 @@ export default function CreatePageDialog({
       maskClosable={!busy}
       keyboard={!busy}
       onCancel={() => {
-        if (!busy) onClose();
+        if (!busy) close();
       }}
       onOk={() => form.submit()}
     >

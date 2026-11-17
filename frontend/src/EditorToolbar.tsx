@@ -144,6 +144,8 @@ export default function EditorToolbar({ editor }: { editor: Editor | null }) {
         )}
       </div>
       <Modal
+        transitionName="wiki-dialog"
+        maskTransitionName="wiki-mask"
         title="编辑链接"
         open={linkOpen}
         onCancel={() => setLinkOpen(false)}

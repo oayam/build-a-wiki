@@ -68,6 +68,23 @@ test("directory loading does not flash empty state or transient scrollbars", asy
   await expect(
     sidebar.getByRole("link", { name: "打开页面：父页面", exact: true }),
   ).toBeVisible();
+  const settle = () =>
+    expect
+      .poll(() =>
+        page
+          .locator('.tree-reveal[aria-hidden="false"]')
+          .evaluateAll((elements) =>
+            elements.every(
+              (el) =>
+                getComputedStyle(el).opacity === "1" &&
+                el
+                  .getAnimations()
+                  .every((animation) => animation.playState !== "running"),
+            ),
+          ),
+      )
+      .toBe(true);
+  await settle();
   // Leave room for precisely one real child row, near the overflow threshold.
   const height = await page.evaluate(() => {
     const body = document.querySelector<HTMLElement>(".sidebar-body")!;
@@ -103,6 +120,7 @@ test("directory loading does not flash empty state or transient scrollbars", asy
   await expect(
     sidebar.getByRole("link", { name: "打开页面：子页面", exact: true }),
   ).toBeVisible();
+  await settle();
   expect(await metrics()).toEqual(before);
   await sidebar.getByRole("button", { name: "收起-父页面" }).click();
   await sidebar.getByRole("button", { name: "展开-父页面" }).click();
@@ -111,6 +129,7 @@ test("directory loading does not flash empty state or transient scrollbars", asy
   await expect(
     sidebar.getByRole("link", { name: "打开页面：子页面", exact: true }),
   ).toBeVisible();
+  await settle();
   expect(await metrics()).toEqual(before);
   const refreshed = page.waitForResponse((response) =>
     new URL(response.url()).searchParams.has("parent_id"),
@@ -131,6 +150,7 @@ test("directory loading does not flash empty state or transient scrollbars", asy
     }),
   ).toBeGreaterThan(0);
   await page.setViewportSize({ width: 1200, height });
+  await settle();
   expect(await metrics()).toEqual(before);
   // Cached rows disappear when a refresh reports revoked access.
   denyChildren = true;

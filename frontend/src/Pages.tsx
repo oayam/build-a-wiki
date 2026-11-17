@@ -3,6 +3,7 @@ import React from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Icon from "./Icon";
 import EditorToolbar from "./EditorToolbar";
+import { Collapse, MotionAlert, TreeRow, notifyCreatedNode } from "./Motion";
 import type { CreatePageTarget } from "./CreatePageDialog";
 import { Alert, Button, Input, Form, Space, Spin, Empty } from "antd";
 import {
@@ -28,10 +29,12 @@ export function PageTree({
   navigation = false,
   ancestors = [],
   onCreate,
+  expanded = true,
 }: {
   kb: string;
   parent?: string;
   navigation?: boolean;
+  expanded?: boolean;
   ancestors?: string[];
   onCreate?: (target: CreatePageTarget) => void;
 }) {
@@ -48,6 +51,7 @@ export function PageTree({
     },
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     retry: false,
+    enabled: expanded,
   });
   // Reuse loaded rows on re-expansion while revalidating access in the background.
   // A failed refresh must not leave previously authorized rows visible.
@@ -59,97 +63,102 @@ export function PageTree({
     setOpen((old) => [...new Set([...old, ...ancestors])]);
   }, [ancestorKey]);
   return (
-    <>
-      {query.isError && (
-        <Alert
-          type="error"
-          message={query.error.message}
-          action={
-            <Button size="small" onClick={() => void query.refetch()}>
-              重试
-            </Button>
-          }
-        />
+    <div className="tree-branch" aria-busy={expanded && query.isPending}>
+      {expanded && query.isPending && (
+        <span className="sr-only" role="status">
+          正在加载目录…
+        </span>
       )}
-      <ul className="page-tree" aria-busy={query.isPending}>
-        {query.isPending && (
-          <li className="tree-loading" role="status">
-            正在加载目录…
-          </li>
+      <Collapse open={expanded && !query.isPending} className="tree-reveal">
+        {query.isError && (
+          <Alert
+            type="error"
+            message={query.error.message}
+            action={
+              <Button size="small" onClick={() => void query.refetch()}>
+                重试
+              </Button>
+            }
+          />
         )}
-        {items.map((p) => (
-          <li key={p.id}>
-            <div className="page-tree-row">
-              {p.has_children ? (
-                <button
-                  className="tree-toggle"
-                  aria-label={`${open.includes(p.id) ? "收起" : "展开"}-${p.title}`}
-                  aria-expanded={open.includes(p.id)}
-                  onClick={() =>
-                    setOpen(
-                      open.includes(p.id)
-                        ? open.filter((x) => x !== p.id)
-                        : [...open, p.id],
-                    )
-                  }
-                >
-                  <span
-                    className={`tree-triangle ${open.includes(p.id) ? "expanded" : ""}`}
-                    aria-hidden="true"
+        <ul className="page-tree" aria-busy={query.isPending}>
+          {items.map((p) => (
+            <li key={p.id}>
+              <TreeRow id={p.id} kind="page" className="page-tree-row">
+                {p.has_children ? (
+                  <button
+                    className="tree-toggle"
+                    aria-label={`${open.includes(p.id) ? "收起" : "展开"}-${p.title}`}
+                    aria-expanded={open.includes(p.id)}
+                    onClick={() =>
+                      setOpen(
+                        open.includes(p.id)
+                          ? open.filter((x) => x !== p.id)
+                          : [...open, p.id],
+                      )
+                    }
                   >
-                    ▲
-                  </span>
-                </button>
-              ) : (
-                <span className="tree-toggle-spacer" />
-              )}
-              <NavLink
-                to={`/pages/${p.id}`}
-                end
-                aria-label={navigation ? `打开页面：${p.title}` : undefined}
-                title={p.title}
-              >
-                <Icon name={p.has_children ? "folder" : "file"} />
-                <span>{p.title}</span>
-              </NavLink>
-              {navigation && onCreate && (
-                <button
-                  className="tree-create"
-                  aria-label={`创建子页面：${p.title}`}
-                  title={
-                    p.role >= 2 ? "创建子页面" : "需要编辑权限才能创建子页面"
-                  }
-                  disabled={p.role < 2}
-                  onClick={() => onCreate({ kb, parent: p.id, title: p.title })}
+                    <span
+                      className={`tree-triangle ${open.includes(p.id) ? "expanded" : ""}`}
+                      aria-hidden="true"
+                    >
+                      ▲
+                    </span>
+                  </button>
+                ) : (
+                  <span className="tree-toggle-spacer" />
+                )}
+                <NavLink
+                  to={`/pages/${p.id}`}
+                  end
+                  aria-label={navigation ? `打开页面：${p.title}` : undefined}
+                  title={p.title}
                 >
-                  <Icon name="plus" />
-                </button>
+                  <Icon name={p.has_children ? "folder" : "file"} />
+                  <span>{p.title}</span>
+                </NavLink>
+                {navigation && onCreate && (
+                  <button
+                    className="tree-create"
+                    aria-label={`创建子页面：${p.title}`}
+                    title={
+                      p.role >= 2 ? "创建子页面" : "需要编辑权限才能创建子页面"
+                    }
+                    disabled={p.role < 2}
+                    onClick={() =>
+                      onCreate({ kb, parent: p.id, title: p.title })
+                    }
+                  >
+                    <Icon name="plus" />
+                  </button>
+                )}
+              </TreeRow>
+              {p.has_children && (
+                <PageTree
+                  kb={kb}
+                  parent={p.id}
+                  expanded={expanded && open.includes(p.id)}
+                  navigation={navigation}
+                  ancestors={ancestors}
+                  onCreate={onCreate}
+                />
               )}
-            </div>
-            {p.has_children && open.includes(p.id) && (
-              <PageTree
-                kb={kb}
-                parent={p.id}
-                navigation={navigation}
-                ancestors={ancestors}
-                onCreate={onCreate}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
-      {query.hasNextPage && !query.isError && (
-        <Button
-          loading={query.isFetchingNextPage}
-          onClick={() => void query.fetchNextPage()}
-        >
-          加载更多页面
-        </Button>
-      )}
-      {query.isSuccess && !items.length && (
-        <p className="tree-empty">暂无可见页面</p>
-      )}
-    </>
+            </li>
+          ))}
+        </ul>
+        {query.hasNextPage && !query.isError && (
+          <Button
+            loading={query.isFetchingNextPage}
+            onClick={() => void query.fetchNextPage()}
+          >
+            加载更多页面
+          </Button>
+        )}
+        {query.isSuccess && !items.length && (
+          <p className="tree-empty">暂无可见页面</p>
+        )}
+      </Collapse>
+    </div>
   );
 }
 export function LibraryPages() {
@@ -185,6 +194,7 @@ export function LibraryPages() {
                   body: emptyBody,
                 },
               );
+              notifyCreatedNode(p.id, "page");
               navigate(`/pages/${p.id}`);
             } catch (e) {
               setError((e as Error).message);
@@ -376,19 +386,24 @@ function Document({
     <>
       <div className="document-header">
         <div className="document-heading">
-          {editing && !preview ? (
-            <Input
-              className="document-title"
-              aria-label="页面标题"
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                setDirty(true);
-              }}
-            />
-          ) : (
-            <h1>{title}</h1>
-          )}
+          <div
+            className="document-title-slot"
+            key={editing && !preview ? "edit" : "read"}
+          >
+            {editing && !preview ? (
+              <Input
+                className="document-title"
+                aria-label="页面标题"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setDirty(true);
+                }}
+              />
+            ) : (
+              <h1>{title}</h1>
+            )}
+          </div>
           <span className={`document-badge ${editing ? "is-draft" : ""}`}>
             {editing ? (preview ? "预览" : "草稿") : "已发布"}
           </span>
@@ -449,80 +464,79 @@ function Document({
           <Link to={`/pages/${page.id}/move`}>移动与排序</Link>
         )}
       </div>
-      {message && (
-        <Alert
-          type="success"
-          message={message}
-          action={
+      <MotionAlert
+        visible={!!message}
+        type="success"
+        message={message}
+        action={
+          <Button
+            type="text"
+            size="small"
+            aria-label="关闭保存提示"
+            onClick={() => setMessage("")}
+          >
+            ×
+          </Button>
+        }
+      />
+      <MotionAlert
+        visible={!!error}
+        type="error"
+        message={error}
+        description="本地内容不会被其他成员的版本覆盖。"
+        action={
+          <Button
+            onClick={() =>
+              void request<Detail>(`/pages/${page.id}`)
+                .then(setLatest)
+                .catch((e) => setError(e.message))
+            }
+          >
+            查看最新版本
+          </Button>
+        }
+      />
+      <MotionAlert
+        visible={!!draft.candidate}
+        type="info"
+        message="发现未共享的个人草稿"
+        action={
+          <Space>
             <Button
-              type="text"
-              size="small"
-              aria-label="关闭保存提示"
-              onClick={() => setMessage("")}
+              onClick={() => {
+                const v = draft.restore();
+                if (v) {
+                  setTitle(v.title);
+                  setBody(v.body as JSONContent);
+                  setBase(v.base_revision_id);
+                  editor?.commands.setContent(v.body as JSONContent, {
+                    emitUpdate: false,
+                  });
+                  setEditing(true);
+                  setDirty(true);
+                }
+              }}
             >
-              ×
+              恢复个人草稿
             </Button>
-          }
-        />
-      )}
-      {error && (
-        <Alert
-          type="error"
-          message={error}
-          description="本地内容不会被其他成员的版本覆盖。"
-          action={
             <Button
-              onClick={() =>
-                void request<Detail>(`/pages/${page.id}`)
-                  .then(setLatest)
-                  .catch((e) => setError(e.message))
-              }
+              onClick={() => {
+                if (confirm("永久丢弃个人草稿？"))
+                  void draft.discard().catch((e) => setError(e.message));
+              }}
             >
-              查看最新版本
+              放弃个人草稿
             </Button>
-          }
-        />
-      )}
-      {draft.candidate && (
-        <Alert
-          type="info"
-          message="发现未共享的个人草稿"
-          action={
-            <Space>
-              <Button
-                onClick={() => {
-                  const v = draft.restore();
-                  if (v) {
-                    setTitle(v.title);
-                    setBody(v.body as JSONContent);
-                    setBase(v.base_revision_id);
-                    editor?.commands.setContent(v.body as JSONContent, {
-                      emitUpdate: false,
-                    });
-                    setEditing(true);
-                    setDirty(true);
-                  }
-                }}
-              >
-                恢复个人草稿
-              </Button>
-              <Button
-                onClick={() => {
-                  if (confirm("永久丢弃个人草稿？"))
-                    void draft.discard().catch((e) => setError(e.message));
-                }}
-              >
-                放弃个人草稿
-              </Button>
-            </Space>
-          }
-        />
-      )}
+          </Space>
+        }
+      />
       <section
         className={`document-canvas ${preview ? "preview" : editing ? "editing" : "reading"}`}
         aria-label={preview ? "文档预览" : "文档正文"}
       >
-        {editing && !preview && <EditorToolbar editor={editor} />}
+        <Collapse open={editing && !preview} className="toolbar-motion">
+          <EditorToolbar editor={editor} />
+        </Collapse>
         <EditorContent editor={editor} />
       </section>
       {editing && (

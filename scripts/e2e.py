@@ -1,5 +1,5 @@
 """Run browser acceptance against a fresh random schema in TEST_DATABASE_URL."""
-import os,pathlib,subprocess,time,urllib.request,urllib.parse,uuid
+import os,pathlib,subprocess,sys,time,urllib.request,urllib.parse,uuid
 root=pathlib.Path(__file__).resolve().parent.parent
 base=os.environ['TEST_DATABASE_URL']
 schema='e2e_'+uuid.uuid4().hex
@@ -22,7 +22,7 @@ with (root/'.data/e2e.log').open('w') as log:
     urllib.request.urlopen('http://127.0.0.1:15173/health/ready',timeout=1).close();break
    except OSError:time.sleep(.1)
   else:raise RuntimeError('servers not ready')
-  subprocess.run(['npx','playwright','test'],cwd=root/'frontend',env=config,check=True)
+  subprocess.run(['npx','playwright','test',*sys.argv[1:]],cwd=root/'frontend',env=config,check=True)
   success=True
  finally:
   for p in processes:p.terminate()

@@ -1,4 +1,5 @@
 import React from "react";
+import { useReducedMotion, notifyCreatedNode } from "./Motion";
 import { Alert, Form, Input, Modal } from "antd";
 import { useNavigate } from "react-router-dom";
 import { request } from "./session";
@@ -10,6 +11,12 @@ export default function CreateLibraryDialog({
   onClose: () => void;
 }) {
   const [form] = Form.useForm();
+  const reduced = useReducedMotion();
+  const close = () => {
+    if (reduced) onClose();
+    else setVisible(false);
+  };
+  const [visible, setVisible] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const navigate = useNavigate();
@@ -23,7 +30,8 @@ export default function CreateLibraryDialog({
         "POST",
         { name: name.trim() },
       );
-      onClose();
+      close();
+      notifyCreatedNode(library.id, "library");
       navigate(`/knowledge-bases/${library.id}`);
     } catch (e) {
       setError((e as Error).message);
@@ -33,7 +41,10 @@ export default function CreateLibraryDialog({
   }
   return (
     <Modal
-      open
+      open={visible}
+      afterClose={onClose}
+      transitionName="wiki-dialog"
+      maskTransitionName="wiki-mask"
       title="新建知识库"
       okText="确认创建知识库"
       cancelText="取消"
@@ -43,7 +54,7 @@ export default function CreateLibraryDialog({
       maskClosable={!busy}
       keyboard={!busy}
       onCancel={() => {
-        if (!busy) onClose();
+        if (!busy) close();
       }}
       onOk={() => form.submit()}
     >

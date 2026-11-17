@@ -22,6 +22,7 @@ import { health } from "./api";
 import { zh } from "./locales/zh";
 import "./style.css";
 import Workspace from "./Workspace";
+import { useReducedMotion } from "./Motion";
 import { SessionGate, useSession } from "./session";
 import Move from "./Move";
 import History from "./History";
@@ -182,12 +183,17 @@ const router = createBrowserRouter([
   },
 ]);
 const client = new QueryClient();
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+function ThemedApp() {
+  const reduced = useReducedMotion();
+  return (
     <ConfigProvider
       locale={zhCN}
       theme={{
         token: {
+          motion: !reduced,
+          motionDurationFast: "0.12s",
+          motionDurationMid: "0.2s",
+          motionDurationSlow: "0.24s",
           colorPrimary: "#2468ed",
           colorText: "#22324f",
           colorBorder: "#dce4f0",
@@ -202,5 +208,10 @@ createRoot(document.getElementById("root")!).render(
         <RouterProvider router={router} />
       </QueryClientProvider>
     </ConfigProvider>
+  );
+}
+createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <ThemedApp />
   </React.StrictMode>,
 );

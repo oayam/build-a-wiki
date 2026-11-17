@@ -1,5 +1,6 @@
 import React from "react";
 import Icon from "./Icon";
+import { notifyCreatedNode } from "./Motion";
 import {
   Alert,
   Button,
@@ -47,8 +48,9 @@ export function Libraries() {
           setBusy(true);
           setError("");
           try {
-            await request("/knowledge-bases", "POST", v);
+            const library = await request<K>("/knowledge-bases", "POST", v);
             await load();
+            notifyCreatedNode(library.id, "library");
           } catch (e) {
             setError((e as Error).message);
           } finally {

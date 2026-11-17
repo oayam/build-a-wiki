@@ -125,6 +125,7 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
   await page.screenshot({
     path: path.join(output, "desktop.png"),
     fullPage: true,
+    animations: "disabled",
   });
   for (const width of [768, 390]) {
     await page.setViewportSize({ width, height: 900 });
@@ -143,6 +144,7 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
     await page.screenshot({
       path: path.join(output, `${width === 390 ? "mobile" : "tablet"}.png`),
       fullPage: true,
+      animations: "disabled",
     });
   }
   await page.getByRole("button", { name: "展开侧栏" }).click();
