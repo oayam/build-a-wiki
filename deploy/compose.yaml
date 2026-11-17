@@ -64,4 +64,4 @@ volumes:
   attachments:
 networks:
   internal: {internal: true}
-  edge: {internal: true}
+  edge: {}

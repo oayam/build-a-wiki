@@ -1,6 +1,6 @@
 {
-  "backup_seconds": 1.1218632769996475,
-  "restore_seconds": 1.3052813989997958,
+  "backup_seconds": 1.4740502570002718,
+  "restore_seconds": 1.515829827001653,
   "observed_rpo_seconds": 0,
   "scope": "quiesced one-page fixture, one attachment; not a full-capacity RTO guarantee",
   "verified": [
