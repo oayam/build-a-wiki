@@ -6,6 +6,7 @@
   --blue: #2468ed;
   --muted: #7d8ba4;
   --border: #e1e8f2;
+  --topbar-height: 61.2px;
 }
 * {
   box-sizing: border-box;
@@ -30,7 +31,7 @@ svg {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  grid-template-rows: 68px 1fr;
+  grid-template-rows: var(--topbar-height) 1fr;
 }
 .topbar {
   grid-column: 1 / -1;
@@ -51,7 +52,7 @@ svg {
   align-items: center;
   gap: 12px;
   color: white;
-  font-size: 25px;
+  font-size: 23px;
   font-weight: 720;
   letter-spacing: -0.6px;
   white-space: nowrap;
@@ -61,26 +62,27 @@ svg {
   place-items: center;
   background: #4080fa;
   border-radius: 12px;
-  height: 49px;
-  width: 49px;
+  height: 44px;
+  width: 44px;
   box-shadow: inset 0 1px 0 #ffffff35;
 }
 .brand-mark svg {
-  width: 32px;
-  height: 32px;
+  width: 29px;
+  height: 29px;
 }
 .global-search {
   width: min(600px, 100%);
   margin: 0 auto;
 }
 .global-search .ant-input-affix-wrapper {
-  height: 42px;
-  padding: 8px 14px;
+  height: 38px;
+  padding: 6px 12px;
   border-color: #dce8ff;
   background: #edf3ff;
   box-shadow: 0 2px 6px #122d621a;
 }
 .global-search input.ant-input {
+  font-size: 13px;
   background: transparent;
   color: #294576;
 }
@@ -105,13 +107,14 @@ kbd {
   border-left: 1px solid #ffffff35;
 }
 .account {
+  font-size: 14px;
   color: white;
 }
 .avatar {
   display: grid;
   place-items: center;
-  height: 34px;
-  width: 34px;
+  height: 31px;
+  width: 31px;
   border-radius: 50%;
   background: #eaf1ff;
   border: 2px solid #fff;
@@ -126,9 +129,9 @@ kbd {
 }
 .sidebar {
   position: sticky;
-  top: 68px;
+  top: var(--topbar-height);
   align-self: start;
-  height: calc(100vh - 68px);
+  height: calc(100vh - var(--topbar-height));
   background: linear-gradient(120deg, #f5f8ff, #f0f5fc);
   border-right: 1px solid var(--border);
   display: flex;
@@ -743,21 +746,21 @@ summary:focus-visible {
   }
   .topbar {
     position: relative;
-    padding: 12px 16px;
+    padding: 11px 16px;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 10px;
   }
   .brand {
     min-width: 0;
-    font-size: 20px;
+    font-size: 19px;
   }
   .brand-mark {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
   }
   .brand-mark svg {
-    width: 25px;
-    height: 25px;
+    width: 23px;
+    height: 23px;
   }
   .global-search {
     order: 3;
