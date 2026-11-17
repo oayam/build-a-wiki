@@ -63,17 +63,20 @@ export default function Attachments({
     }
   }
   return (
-    <section>
+    <section className="attachments-panel">
       <h2>附件</h2>
       {error && <Alert type="error" message={error} />}
       {canEdit && (
-        <Space>
-          <input
-            aria-label="选择附件"
-            type="file"
-            disabled={busy}
-            onChange={(e) => setFile(e.target.files?.[0])}
-          />
+        <Space wrap>
+          <label className="file-picker">
+            <span>{file ? file.name : "选择附件"}</span>
+            <input
+              aria-label="选择附件"
+              type="file"
+              disabled={busy}
+              onChange={(e) => setFile(e.target.files?.[0])}
+            />
+          </label>
           <Button disabled={!file} loading={busy} onClick={() => void upload()}>
             上传附件（失败可重试）
           </Button>

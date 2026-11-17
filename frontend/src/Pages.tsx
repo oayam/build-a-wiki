@@ -1,7 +1,15 @@
 import Attachments from "./Attachments";
 import React from "react";
+import Icon from "./Icon";
+import EditorToolbar from "./EditorToolbar";
 import { Alert, Button, Input, Form, Space, Spin, Empty } from "antd";
-import { Link, useParams, useNavigate, useBlocker } from "react-router-dom";
+import {
+  Link,
+  NavLink,
+  useParams,
+  useNavigate,
+  useBlocker,
+} from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { JSONContent } from "@tiptap/core";
 import type { components } from "./api.generated";
@@ -12,7 +20,17 @@ type Detail = components["schemas"]["PageDetail"];
 type List = components["schemas"]["PageList"];
 type Summary = components["schemas"]["PageSummary"];
 const emptyBody = { type: "doc", content: [{ type: "paragraph" }] };
-export function PageTree({ kb, parent }: { kb: string; parent?: string }) {
+export function PageTree({
+  kb,
+  parent,
+  navigation = false,
+  ancestors = [],
+}: {
+  kb: string;
+  parent?: string;
+  navigation?: boolean;
+  ancestors?: string[];
+}) {
   const [items, setItems] = React.useState<Summary[]>([]);
   const [cursor, setCursor] = React.useState<string | null>(null);
   const [error, setError] = React.useState("");
@@ -26,19 +44,33 @@ export function PageTree({ kb, parent }: { kb: string; parent?: string }) {
     setCursor(r.next_cursor ?? null);
   }
   React.useEffect(() => {
-    void load().catch((e) => setError(e.message));
+    const refresh = () => {
+      setError("");
+      void load().catch((e) => {
+        setItems([]);
+        setError(e.message);
+      });
+    };
+    refresh();
+    window.addEventListener("wiki-navigation-changed", refresh);
+    return () => window.removeEventListener("wiki-navigation-changed", refresh);
   }, [kb, parent]);
+  const ancestorKey = ancestors.join(",");
+  React.useEffect(() => {
+    setOpen((old) => [...new Set([...old, ...ancestors])]);
+  }, [ancestorKey]);
   return (
     <>
       {error && <Alert type="error" message={error} />}
       <ul className="page-tree">
         {items.map((p) => (
           <li key={p.id}>
-            <Space>
-              {p.has_children && (
-                <Button
-                  size="small"
+            <div className="page-tree-row">
+              {p.has_children ? (
+                <button
+                  className="tree-toggle"
                   aria-label={`展开-${p.title}`}
+                  aria-expanded={open.includes(p.id)}
                   onClick={() =>
                     setOpen(
                       open.includes(p.id)
@@ -47,12 +79,32 @@ export function PageTree({ kb, parent }: { kb: string; parent?: string }) {
                     )
                   }
                 >
-                  {open.includes(p.id) ? "−" : "+"}
-                </Button>
+                  <Icon
+                    name="chevron"
+                    className={open.includes(p.id) ? "rotated" : ""}
+                  />
+                </button>
+              ) : (
+                <span className="tree-toggle-spacer" />
               )}
-              <Link to={`/pages/${p.id}`}>{p.title}</Link>
-            </Space>
-            {open.includes(p.id) && <PageTree kb={kb} parent={p.id} />}
+              <NavLink
+                to={`/pages/${p.id}`}
+                end
+                aria-label={navigation ? `打开页面：${p.title}` : undefined}
+                title={p.title}
+              >
+                <Icon name={p.has_children ? "folder" : "file"} />
+                <span>{p.title}</span>
+              </NavLink>
+            </div>
+            {p.has_children && open.includes(p.id) && (
+              <PageTree
+                kb={kb}
+                parent={p.id}
+                navigation={navigation}
+                ancestors={ancestors}
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -63,7 +115,7 @@ export function PageTree({ kb, parent }: { kb: string; parent?: string }) {
           加载更多页面
         </Button>
       )}
-      {!items.length && !error && <p>暂无可见页面</p>}
+      {!items.length && !error && <p className="tree-empty">暂无可见页面</p>}
     </>
   );
 }
@@ -275,6 +327,7 @@ function Document({
       }
       setMessage("共享版本已保存");
       setEditing(false);
+      setPreview(false);
       setLatest(undefined);
     } catch (e) {
       setError((e as Error).message);
@@ -284,26 +337,72 @@ function Document({
   }
   return (
     <>
-      <nav className="breadcrumbs">
-        {page.breadcrumbs.map((p) => (
-          <Link key={p.id} to={`/pages/${p.id}`}>
-            {p.title} /{" "}
-          </Link>
-        ))}
-      </nav>
-      {editing ? (
-        <Input
-          aria-label="页面标题"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value);
-            setDirty(true);
-          }}
-        />
-      ) : (
-        <h1>{title}</h1>
-      )}
-      <Space wrap style={{ margin: "16px 0" }}>
+      <div className="document-header">
+        <div className="document-heading">
+          {editing ? (
+            <Input
+              className="document-title"
+              aria-label="页面标题"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setDirty(true);
+              }}
+            />
+          ) : (
+            <h1>{title}</h1>
+          )}
+          <span className={`document-badge ${editing ? "is-draft" : ""}`}>
+            {editing ? (preview ? "预览" : "草稿") : "已发布"}
+          </span>
+        </div>
+        <Space wrap className="document-actions">
+          {page.role >= 2 && !editing && (
+            <Button
+              type="primary"
+              disabled={!draft.ready || !!draft.candidate}
+              onClick={() => setEditing(true)}
+            >
+              编辑页面
+            </Button>
+          )}
+          {editing && (
+            <>
+              <Button type="primary" loading={busy} onClick={() => void save()}>
+                保存共享版本
+              </Button>
+              <Button onClick={() => setPreview(!preview)}>
+                {preview ? "继续编辑" : "预览"}
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!dirty || confirm("放弃未保存内容和个人草稿？")) {
+                    try {
+                      await draft.discard();
+                    } catch (e) {
+                      setError((e as Error).message);
+                      return;
+                    }
+                    setBase(page.current_revision_id);
+                    setTitle(page.title);
+                    setBody(page.body as JSONContent);
+                    editor?.commands.setContent(page.body as JSONContent, {
+                      emitUpdate: false,
+                    });
+                    setDirty(false);
+                    setEditing(false);
+                    sessionStorage.removeItem(localKey);
+                  }
+                }}
+              >
+                放弃编辑
+              </Button>
+            </>
+          )}
+        </Space>
+      </div>
+      <div className="document-links">
+        {" "}
         <Link to={`/pages/${page.id}/permissions`}>页面权限</Link>
         <Link to={`/pages/${page.id}/history`}>版本历史</Link>
         {page.role >= 3 && (
@@ -312,48 +411,7 @@ function Document({
         {page.role >= 3 && (
           <Link to={`/pages/${page.id}/move`}>移动与排序</Link>
         )}
-        {page.role >= 2 && !editing && (
-          <Button
-            disabled={!draft.ready || !!draft.candidate}
-            onClick={() => setEditing(true)}
-          >
-            编辑页面
-          </Button>
-        )}
-        {editing && (
-          <>
-            <Button type="primary" loading={busy} onClick={() => void save()}>
-              保存共享版本
-            </Button>
-            <Button onClick={() => setPreview(!preview)}>
-              {preview ? "继续编辑" : "预览"}
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!dirty || confirm("放弃未保存内容和个人草稿？")) {
-                  try {
-                    await draft.discard();
-                  } catch (e) {
-                    setError((e as Error).message);
-                    return;
-                  }
-                  setBase(page.current_revision_id);
-                  setTitle(page.title);
-                  setBody(page.body as JSONContent);
-                  editor?.commands.setContent(page.body as JSONContent, {
-                    emitUpdate: false,
-                  });
-                  setDirty(false);
-                  setEditing(false);
-                  sessionStorage.removeItem(localKey);
-                }
-              }}
-            >
-              放弃编辑
-            </Button>
-          </>
-        )}
-      </Space>
+      </div>
       {message && <Alert type="success" message={message} />}
       {error && (
         <Alert
@@ -372,41 +430,6 @@ function Document({
             </Button>
           }
         />
-      )}
-      {editing && !preview && (
-        <div className="toolbar">
-          <Button onClick={() => editor?.chain().focus().toggleBold().run()}>
-            粗体
-          </Button>
-          <Button
-            onClick={() =>
-              editor?.chain().focus().toggleHeading({ level: 2 }).run()
-            }
-          >
-            标题
-          </Button>
-          <Button
-            onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          >
-            列表
-          </Button>
-          <Button
-            onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-          >
-            代码
-          </Button>
-          <Button
-            onClick={() =>
-              editor
-                ?.chain()
-                .focus()
-                .insertTable({ rows: 2, cols: 2, withHeaderRow: true })
-                .run()
-            }
-          >
-            表格
-          </Button>
-        </div>
       )}
       {draft.candidate && (
         <Alert
@@ -443,7 +466,13 @@ function Document({
           }
         />
       )}
-      <EditorContent editor={editor} />
+      <section
+        className={`document-canvas ${editing ? "editing" : "reading"}`}
+        aria-label={preview ? "文档预览" : "文档正文"}
+      >
+        {editing && !preview && <EditorToolbar editor={editor} />}
+        <EditorContent editor={editor} />
+      </section>
       {editing && (
         <>
           <p role="status">{draft.status}</p>

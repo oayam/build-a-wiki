@@ -41,6 +41,11 @@ export default function Search() {
     }
   }
   React.useEffect(() => {
+    setQ(params.get("q") ?? "");
+    setFields(params.get("fields") ?? "all");
+    setScope(params.get("scope") ?? "");
+    setRelation(params.get("relation") ?? "creator");
+    setPerson(params.get("person_id") ?? undefined);
     void load();
   }, [params]);
   async function findPeople(q: string) {

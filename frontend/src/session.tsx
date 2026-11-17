@@ -1,4 +1,5 @@
 import React from "react";
+import Icon from "./Icon";
 import { Alert, Button, Input, Form, Spin, Space } from "antd";
 import type { components } from "./api.generated";
 type Actor = components["schemas"]["Actor"];
@@ -22,6 +23,12 @@ export async function request<T>(
       window.dispatchEvent(new Event("wiki-session-expired"));
     throw new Error(error.message ?? "请求失败");
   }
+  if (
+    method !== "GET" &&
+    /^\/(knowledge-bases|pages)(\/|$)/.test(path) &&
+    !/\/(draft|visit)/.test(path)
+  )
+    window.dispatchEvent(new Event("wiki-navigation-changed"));
   return response.status === 204 ? (undefined as T) : response.json();
 }
 const Session = React.createContext<{
@@ -82,7 +89,10 @@ export function SessionGate({ children }: { children: React.ReactNode }) {
     );
   if (!user)
     return (
-      <main style={{ maxWidth: 460, margin: "10vh auto" }}>
+      <main className="login-page">
+        <div className="login-brand">
+          <Icon name="book" /> Build-a-Wiki
+        </div>
         <h1>登录团队知识库</h1>
         <p>使用管理员为你创建的账号。</p>
         {error && <Alert type="error" message={error} />}
@@ -122,8 +132,11 @@ export function Account() {
   const { user, logout } = useSession();
   const [error, setError] = React.useState("");
   return (
-    <Space>
-      {user.display_name}
+    <Space className="account">
+      <span className="avatar" aria-hidden="true">
+        {user.display_name.slice(0, 1).toUpperCase()}
+      </span>
+      <span className="account-name">{user.display_name}</span>
       <Button onClick={() => void logout().catch((e) => setError(e.message))}>
         退出
       </Button>

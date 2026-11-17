@@ -61,7 +61,7 @@ test("browser identity → groups → private library → ACL → revoke → ind
   await login(owner, "owner");
   await owner.getByLabel("知识库名称", { exact: true }).fill("研发知识库");
   await owner.getByRole("button", { name: "新建私有知识库" }).click();
-  await owner.getByRole("link", { name: "研发知识库" }).click();
+  await owner.getByRole("link", { name: "研发知识库", exact: true }).click();
   const url = owner.url();
   const kid = url.split("/").pop()!;
   await owner.getByRole("link",{name:"管理权限与设置"}).click();
@@ -72,7 +72,7 @@ test("browser identity → groups → private library → ACL → revoke → ind
   const editorContext = await browser.newContext();
   const editor = await editorContext.newPage();
   await login(editor, "editor");
-  await editor.getByRole("link", { name: "研发知识库" }).click();
+  await editor.getByRole("link", { name: "研发知识库", exact: true }).click();
   await editor.getByRole("link",{name:"管理权限与设置"}).click();
   await expect(editor.getByText(/当前角色：编辑者/)).toBeVisible();
   await expect(
@@ -81,7 +81,7 @@ test("browser identity → groups → private library → ACL → revoke → ind
   const readerContext = await browser.newContext();
   const reader = await readerContext.newPage();
   await login(reader, "reader");
-  await reader.getByRole("link", { name: "研发知识库" }).click();
+  await reader.getByRole("link", { name: "研发知识库", exact: true }).click();
   await reader.getByRole("link",{name:"管理权限与设置"}).click();
   await expect(reader.getByText(/当前角色：查看者/)).toBeVisible();
   // Group revocation must immediately agree across browser, API and SQL.

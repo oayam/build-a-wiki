@@ -17,11 +17,11 @@ test("attachments, literal search, trash restore, audit and offline local resour
   await page.getByRole("button", { name: /登\s*录/ }).click();
   await page.getByLabel("知识库名称", { exact: true }).fill("附件回收验收");
   await page.getByRole("button", { name: "新建私有知识库" }).click();
-  await page.getByRole("link", { name: "附件回收验收" }).click();
+  await page.getByRole("link", { name: "附件回收验收", exact: true }).click();
   await page.getByLabel("新页面标题", { exact: true }).fill("附件百分比100%");
   await page.getByRole("button", { name: "创建页面", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "附件百分比100%" }),
+    page.getByRole("heading", { name: "附件百分比100%", exact: true }),
   ).toBeVisible();
   const url = page.url();
   await page.getByLabel("选择附件").setInputFiles({
@@ -74,7 +74,7 @@ test("attachments, literal search, trash restore, audit and offline local resour
   await page.getByRole("link", { name: "搜索", exact: true }).click();
   await page.getByLabel("搜索关键词").fill("100%");
   await page.getByRole("button", { name: "执行搜索" }).click();
-  await page.getByRole("link", { name: "附件百分比100%" }).click();
+  await page.getByRole("link", { name: "附件百分比100%", exact: true }).click();
   await expect(page).toHaveURL(url);
   await page.getByRole("link", { name: "删除页面", exact: true }).click();
   await page.getByRole("button", { name: "预览删除影响" }).click();
@@ -90,7 +90,7 @@ test("attachments, literal search, trash restore, audit and offline local resour
   ).toHaveCount(0);
   await page.goto(url);
   await expect(
-    page.getByRole("heading", { name: "附件百分比100%" }),
+    page.getByRole("heading", { name: "附件百分比100%", exact: true }),
   ).toBeVisible();
   expect((await page.request.get(href!)).status()).toBe(200);
   await page.getByRole("link", { name: "审计与系统状态" }).click();

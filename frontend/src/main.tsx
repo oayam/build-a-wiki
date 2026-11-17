@@ -6,7 +6,6 @@ import { createRoot } from "react-dom/client";
 import {
   createBrowserRouter,
   RouterProvider,
-  NavLink,
   Routes,
   Route,
 } from "react-router-dom";
@@ -22,7 +21,8 @@ import { extensions, fixture, plainText } from "./editor";
 import { health } from "./api";
 import { zh } from "./locales/zh";
 import "./style.css";
-import { SessionGate, Account, useSession } from "./session";
+import Workspace from "./Workspace";
+import { SessionGate, useSession } from "./session";
 import Move from "./Move";
 import History from "./History";
 import Recent from "./Recent";
@@ -109,98 +109,66 @@ function Prototype() {
 function App() {
   const { user } = useSession();
   return (
-    <div className="shell">
-      <aside>
-        <div className="brand">
-          <span>W</span>
-          {zh.brand}
-        </div>
-        <div className="workspace">{zh.workspace}</div>
-        <nav>
-          <NavLink to="/" end>
-            {zh.home}
-          </NavLink>
-          <NavLink to="/search">搜索</NavLink>
-          {user.is_system_admin && (
-            <NavLink to="/admin/operations">审计与系统状态</NavLink>
-          )}
-          <NavLink to="/trash">回收站</NavLink>
-          <NavLink to="/shared">{zh.shared}</NavLink>
-          <NavLink to="/editor">{zh.editor}</NavLink>
-          <NavLink to="/status">{zh.status}</NavLink>
-          {user.is_system_admin && (
-            <NavLink to="/admin/users">账号与用户组</NavLink>
-          )}
-        </nav>
-        <footer>团队知识库</footer>
-      </aside>
-      <div className="content">
-        <header>
-          知识管理 / 工作台
-          <Account />
-        </header>
-        <main>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <>
-                  <Libraries />
-                  <Recent />
-                </>
-              }
-            />
-            <Route
-              path="/knowledge-bases/:id/permissions"
-              element={<PermissionPanel />}
-            />
-            <Route path="/search" element={<Search />} />
-            <Route
-              path="/admin/operations"
-              element={
-                user.is_system_admin ? (
-                  <Operations />
-                ) : (
-                  <Alert type="error" message="没有管理权限" />
-                )
-              }
-            />
-            <Route path="/trash" element={<Trash />} />
-            <Route path="/pages/:id/delete" element={<DeletePage />} />
-            <Route path="/pages/:id/move" element={<Move />} />
-            <Route path="/pages/:id/history" element={<History />} />
-            <Route path="/pages/:id" element={<PageScreen />} />
-            <Route path="/knowledge-bases/:id" element={<LibraryPages />} />
-            <Route
-              path="/pages/:id/permissions"
-              element={<PermissionPanel page />}
-            />
-            <Route
-              path="/admin/users"
-              element={
-                user.is_system_admin ? (
-                  <Users />
-                ) : (
-                  <Alert type="error" message="没有管理权限" />
-                )
-              }
-            />
-            <Route path="/shared" element={<SharedPages />} />
-            <Route path="/editor" element={<Prototype />} />
-            <Route
-              path="/status"
-              element={
-                <>
-                  <h1>{zh.status}</h1>
-                  <Status />
-                </>
-              }
-            />
-            <Route path="*" element={<Empty description={zh.notFound} />} />
-          </Routes>
-        </main>
-      </div>
-    </div>
+    <Workspace>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <Libraries />
+              <Recent />
+            </>
+          }
+        />
+        <Route
+          path="/knowledge-bases/:id/permissions"
+          element={<PermissionPanel />}
+        />
+        <Route path="/search" element={<Search />} />
+        <Route
+          path="/admin/operations"
+          element={
+            user.is_system_admin ? (
+              <Operations />
+            ) : (
+              <Alert type="error" message="没有管理权限" />
+            )
+          }
+        />
+        <Route path="/trash" element={<Trash />} />
+        <Route path="/pages/:id/delete" element={<DeletePage />} />
+        <Route path="/pages/:id/move" element={<Move />} />
+        <Route path="/pages/:id/history" element={<History />} />
+        <Route path="/pages/:id" element={<PageScreen />} />
+        <Route path="/knowledge-bases/:id" element={<LibraryPages />} />
+        <Route
+          path="/pages/:id/permissions"
+          element={<PermissionPanel page />}
+        />
+        <Route
+          path="/admin/users"
+          element={
+            user.is_system_admin ? (
+              <Users />
+            ) : (
+              <Alert type="error" message="没有管理权限" />
+            )
+          }
+        />
+        <Route path="/shared" element={<SharedPages />} />
+        <Route path="/editor" element={<Prototype />} />
+        <Route
+          path="/status"
+          element={
+            <>
+              <h1>{zh.status}</h1>
+              <Status />
+            </>
+          }
+        />
+        <Route path="*" element={<Empty description={zh.notFound} />} />
+      </Routes>
+    </Workspace>
   );
 }
 const router = createBrowserRouter([
@@ -220,9 +188,13 @@ createRoot(document.getElementById("root")!).render(
       locale={zhCN}
       theme={{
         token: {
-          colorPrimary: "#287d68",
+          colorPrimary: "#2468ed",
+          colorText: "#22324f",
+          colorBorder: "#dce4f0",
+          controlHeight: 36,
           borderRadius: 8,
-          fontFamily: "system-ui, sans-serif",
+          fontFamily:
+            'Inter, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif',
         },
       }}
     >

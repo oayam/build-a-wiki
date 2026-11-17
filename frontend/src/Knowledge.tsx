@@ -1,4 +1,5 @@
 import React from "react";
+import Icon from "./Icon";
 import {
   Alert,
   Button,
@@ -34,7 +35,11 @@ export function Libraries() {
   }, []);
   return (
     <>
-      <h1>我的知识库</h1>
+      <div className="page-intro">
+        <span className="eyebrow">团队工作区</span>
+        <h1>我的知识库</h1>
+        <p>让知识有序，让协作更简单。创建、整理并分享团队的每一份经验。</p>
+      </div>
       {error && <Alert type="error" message={error} />}
       <Form
         layout="inline"
@@ -59,6 +64,7 @@ export function Libraries() {
         </Button>
       </Form>
       <Table
+        className="library-table"
         rowKey="id"
         dataSource={items}
         pagination={false}
@@ -67,7 +73,12 @@ export function Libraries() {
           {
             title: "知识库",
             render: (_, k) => (
-              <Link to={`/knowledge-bases/${k.id}`}>{k.name}</Link>
+              <Link className="library-link" to={`/knowledge-bases/${k.id}`}>
+                <span className="library-icon">
+                  <Icon name="folder" />
+                </span>
+                {k.name}
+              </Link>
             ),
           },
           {

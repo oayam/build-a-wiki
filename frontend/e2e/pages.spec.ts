@@ -13,7 +13,7 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   await login(page);
   await page.getByLabel("知识库名称", { exact: true }).fill("版本测试库");
   await page.getByRole("button", { name: "新建私有知识库" }).click();
-  await page.getByRole("link", { name: "版本测试库" }).click();
+  await page.getByRole("link", { name: "版本测试库", exact: true }).click();
   await page.getByLabel("新页面标题", { exact: true }).fill("并发页面");
   await page.getByRole("button", { name: "创建页面", exact: true }).click();
   await expect(

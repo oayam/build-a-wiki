@@ -14,10 +14,10 @@ export default function Recent() {
       .catch((e) => setError(e.message));
   }, []);
   return (
-    <section>
+    <section className="recent-panel">
       <h2>最近访问</h2>
       {error && <Alert type="error" message={error} />}
-      <ul>
+      <ul className="recent-list">
         {items.map((p) => (
           <li key={p.id}>
             <Link to={`/pages/${p.id}`}>{p.title}</Link>
