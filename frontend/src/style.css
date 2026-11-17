@@ -254,7 +254,9 @@ kbd {
   fill: #4b8aff20;
 }
 .library-tree-row > a:hover,
-.page-tree-row > a:hover {
+.page-tree-row > a:hover,
+.library-tree-row:has(> :where(.tree-create):hover) > a,
+.page-tree-row:has(> :where(.tree-create):hover) > a {
   background: #e6eefb;
 }
 .page-tree-row > a.active {
