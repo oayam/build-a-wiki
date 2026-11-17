@@ -1,0 +1,36 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "中文附件",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "/api/v1/attachments/00000000-0000-4000-8000-000000000001/download",
+                "target": "_blank",
+                "rel": "noopener noreferrer nofollow",
+                "class": null,
+                "title": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "image",
+      "attrs": {
+        "src": "/api/v1/attachments/00000000-0000-4000-8000-000000000002/download",
+        "alt": "图片",
+        "title": null,
+        "width": null,
+        "height": null
+      }
+    }
+  ]
+}

@@ -41,7 +41,7 @@ fn node(v: &Value, depth: usize, text: &mut Vec<String>) -> Result<()> {
         "orderedList" => &["start", "type"][..],
         "codeBlock" => &["language"][..],
         "tableCell" | "tableHeader" => &["colspan", "rowspan", "colwidth", "align"][..],
-        "image" => &["src", "alt", "title"][..],
+        "image" => &["src", "alt", "title", "width", "height"][..],
         _ => &[][..],
     };
     if let Some(a) = attrs {
@@ -79,6 +79,14 @@ fn node(v: &Value, depth: usize, text: &mut Vec<String>) -> Result<()> {
                 .and_then(|s| s.strip_suffix("/download"))
                 .ok_or_else(invalid)?;
             uuid::Uuid::parse_str(id).map_err(|_| invalid())?;
+            for key in ["width", "height"] {
+                if let Some(v) = attrs.and_then(|a| a.get(key))
+                    && !v.is_null()
+                    && !v.as_i64().is_some_and(|n| (1..=10000).contains(&n))
+                {
+                    return Err(invalid());
+                }
+            }
             for key in ["alt", "title"] {
                 if attrs
                     .and_then(|a| a.get(key))
@@ -232,6 +240,15 @@ fn node(v: &Value, depth: usize, text: &mut Vec<String>) -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn attachment_fixture() {
+        let v: Value =
+            serde_json::from_str(include_str!("../../fixtures/attachments-v1.json")).unwrap();
+        assert!(validate(1, &v).is_ok());
+        let mut bad = v;
+        bad["content"][1]["attrs"]["width"] = serde_json::json!(-1);
+        assert!(validate(1, &bad).is_err());
+    }
     #[test]
     fn shared_fixture() {
         let f: Value = serde_json::from_str(include_str!("../../fixtures/body-v1.json")).unwrap();

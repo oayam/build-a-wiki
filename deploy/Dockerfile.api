@@ -1,8 +1,9 @@
-FROM rust:1.100.0-bookworm AS build
+FROM rust:1.100.0-bookworm@sha256:ade39a710ef85f3506cffcfec3e8a24ba090badef1dff2fb798f71d878833fea AS build
 WORKDIR /src
 COPY backend/ ./
+COPY fixtures/ /fixtures/
 RUN cargo build --locked --release --bins
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates coreutils && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home wiki
 COPY --from=build /src/target/release/wiki-api /src/target/release/migrate /src/target/release/bootstrap /src/target/release/maintenance /src/target/release/reset-password /usr/local/bin/
 RUN mkdir -p /data/attachments && chown -R wiki:wiki /data

@@ -1,6 +1,10 @@
+import attachmentFixture from "../../fixtures/attachments-v1.json";
 import { describe, it, expect } from "vitest";
 import { fixture, roundTrip, plainText, schema } from "./editor";
 describe("schema v1", () => {
+  it("preserves attachment links and image dimensions", () => {
+    expect(roundTrip(attachmentFixture)).toEqual(attachmentFixture);
+  });
   it("preserves Chinese, code and table through repeated JSON serialization", () => {
     const canonical = roundTrip(fixture);
     expect(roundTrip(JSON.parse(JSON.stringify(canonical)))).toEqual(canonical);

@@ -11,3 +11,5 @@ schema_version=1，Tiptap JSON 为事实来源。标题单独保存并共同版�
 DOM 原型验证发现 StarterKit 默认 trailingNode 会在表格后自动添加段落，导致重新加载后 JSON 变化；现已显式禁用 trailingNode，确保无编辑操作的 JSON 往返严格一致。
 
 T25：Rust校验器 backend/src/body.rs 强制版本、2MiB正文、64层嵌套、节点/marks/attrs白名单与结构约束；链接仅http/https/mailto，图片仅接受附件UUID下载路径。中文/代码/表格样例现由 fixtures/body-v1.json 跨前后端共享。正文纯文本由后端生成，不信任客户端。
+
+附件图片契约：image允许src/alt/title/width/height，宽高可为null或1～10000的整数；src必须为站内附件UUID下载路径。附件链接允许相同的相对路径。前后端共享fixtures/attachments-v1.json并执行往返及校验回归。
