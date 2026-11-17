@@ -1,5 +1,6 @@
 import Attachments from "./Attachments";
 import React from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import Icon from "./Icon";
 import EditorToolbar from "./EditorToolbar";
 import type { CreatePageTarget } from "./CreatePageDialog";
@@ -34,38 +35,48 @@ export function PageTree({
   ancestors?: string[];
   onCreate?: (target: CreatePageTarget) => void;
 }) {
-  const [items, setItems] = React.useState<Summary[]>([]);
-  const [cursor, setCursor] = React.useState<string | null>(null);
-  const [error, setError] = React.useState("");
-  const [open, setOpen] = React.useState<string[]>([]);
-  async function load(next?: string) {
-    const q = new URLSearchParams();
-    if (parent) q.set("parent_id", parent);
-    if (next) q.set("cursor", next);
-    const r = await request<List>(`/knowledge-bases/${kb}/pages?${q}`);
-    setItems((old) => (next ? [...old, ...r.items] : r.items));
-    setCursor(r.next_cursor ?? null);
-  }
-  React.useEffect(() => {
-    const refresh = () => {
-      setError("");
-      void load().catch((e) => {
-        setItems([]);
-        setError(e.message);
-      });
-    };
-    refresh();
-    window.addEventListener("wiki-navigation-changed", refresh);
-    return () => window.removeEventListener("wiki-navigation-changed", refresh);
-  }, [kb, parent]);
+  const { user } = useSession();
+  const [open, setOpen] = React.useState<string[]>(ancestors);
+  const query = useInfiniteQuery({
+    queryKey: ["navigation", user.id, "tree", kb, parent ?? null],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams();
+      if (parent) params.set("parent_id", parent);
+      if (pageParam) params.set("cursor", pageParam);
+      return request<List>(`/knowledge-bases/${kb}/pages?${params}`);
+    },
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    retry: false,
+  });
+  // Reuse loaded rows on re-expansion while revalidating access in the background.
+  // A failed refresh must not leave previously authorized rows visible.
+  const items = query.isError
+    ? []
+    : (query.data?.pages.flatMap((page) => page.items) ?? []);
   const ancestorKey = ancestors.join(",");
   React.useEffect(() => {
     setOpen((old) => [...new Set([...old, ...ancestors])]);
   }, [ancestorKey]);
   return (
     <>
-      {error && <Alert type="error" message={error} />}
-      <ul className="page-tree">
+      {query.isError && (
+        <Alert
+          type="error"
+          message={query.error.message}
+          action={
+            <Button size="small" onClick={() => void query.refetch()}>
+              重试
+            </Button>
+          }
+        />
+      )}
+      <ul className="page-tree" aria-busy={query.isPending}>
+        {query.isPending && (
+          <li className="tree-loading" role="status">
+            正在加载目录…
+          </li>
+        )}
         {items.map((p) => (
           <li key={p.id}>
             <div className="page-tree-row">
@@ -127,14 +138,17 @@ export function PageTree({
           </li>
         ))}
       </ul>
-      {cursor && (
+      {query.hasNextPage && !query.isError && (
         <Button
-          onClick={() => void load(cursor).catch((e) => setError(e.message))}
+          loading={query.isFetchingNextPage}
+          onClick={() => void query.fetchNextPage()}
         >
           加载更多页面
         </Button>
       )}
-      {!items.length && !error && <p className="tree-empty">暂无可见页面</p>}
+      {query.isSuccess && !items.length && (
+        <p className="tree-empty">暂无可见页面</p>
+      )}
     </>
   );
 }

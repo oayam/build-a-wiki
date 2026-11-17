@@ -152,7 +152,10 @@ kbd {
   font-weight: 650;
 }
 .sidebar-body {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: auto;
+  scrollbar-gutter: stable;
+  min-height: 0;
   padding: 16px 12px 12px;
   flex: 1;
 }
@@ -1024,4 +1027,20 @@ summary:focus-visible {
 }
 .directory-create:hover {
   background: #cfe0ff;
+}
+
+.tree-loading {
+  height: 36px;
+  padding: 8px 7px;
+  line-height: 20px;
+  font-size: 12px;
+  color: #8795ac;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sidebar .tree-empty {
+  margin: 3px 0;
+  padding: 8px 7px 8px 24px;
+  line-height: 20px;
 }
