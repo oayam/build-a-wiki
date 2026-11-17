@@ -193,3 +193,9 @@ docker compose --env-file .data/compose-test.env -p wiki-acceptance \
 截图 `bugreport/figure/bug-error-size-of-focus-item-size.png` 中的焦点框顶部缺失，原因是标题继承全局 2px outline 与向外 3px offset，合计外扩 5px，超过动画裁剪容器边缘仅约 2.7px 的留白。目录标题改为 2px 内描边（offset -2px），边框贴合链接点击区域，不改变行高、padding、margin 或键盘焦点语义。尺寸与颜色使用 CSS 自定义属性。
 
 实际浏览器修复前后对比确认标题高度保持 36px，焦点框偏移由 3px 变为 -2px，截图边框完整；目录专项回归通过（3.6 秒），生产构建通过。本地镜像 `78885c31f855`，无新增依赖。
+
+## 目录加号焦点框裁剪修复
+
+最新截图 `bugreport/figure/bug-add-focus-frame-size-error.png` 显示加号焦点框右边缘被裁剪。创建按钮仍使用向外 2px 的 outline-offset，现统一改为 -2px 内描边，适用于目录标题、知识库和页面创建按钮；宽度、颜色引用 CSS 常量。保留鼠标触发弹窗恢复时不显示键盘焦点框的逻辑。
+
+正常及减少动态效果两项回归通过（12.8 秒），实际浏览器确认按钮保持 28px 高，焦点框为 2px 内描边且四边完整；生产构建通过。本地镜像 `ca4f80f37be4`，无新增依赖。

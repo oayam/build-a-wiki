@@ -1000,6 +1000,8 @@ summary:focus-visible {
 }
 .tree-create,
 .directory-create {
+  --create-focus-width: 2px;
+  --create-focus-color: #4686ee;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1044,8 +1046,8 @@ summary:focus-visible {
 }
 .tree-create:focus-visible,
 .directory-create:focus-visible {
-  outline: 2px solid #4686ee;
-  outline-offset: 2px;
+  outline: var(--create-focus-width) solid var(--create-focus-color);
+  outline-offset: calc(-1 * var(--create-focus-width));
 }
 /* Programmatic return to a pointer opener must not inherit the input's ring.
    The marker is cleared on blur or the next keyboard interaction. */
