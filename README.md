@@ -1,60 +1,119 @@
 # Build-a-Wiki
 
-T0～T48：中文登录与账号/组管理、私有知识库和权限管理、页面树、富文本阅读编辑、个人草稿、共享版本与历史恢复、最近访问、页面移动排序。附件上传下载、回收站、搜索及人员筛选、审计与任务状态均已实现。生产部署和验证记录见 docs/OPERATIONS.md。
+Build-a-Wiki 是一个支持私有部署的中文团队知识库，提供分层页面、富文本编辑、版本历史和细粒度权限管理。适用于整理团队文档、操作手册和项目知识，支持通过 Docker 部署及离线安装。
 
-前端已参照 `design/Build-a-Wiki主界面设计稿.png` 更新为蓝色知识库工作区，支持可折叠目录、全局搜索和响应式编辑页面。截图与本机预览说明见 [UI 改版记录](docs/UI_REDESIGN.md)。
+## 主要功能
 
-## 本机开发
+- **知识库与页面目录**：创建知识库、页面和子页面；支持目录展开收起、同库移动与排序，移动后页面地址保持不变。
+- **富文本编辑**：支持标题、列表、引用、代码块、表格、图片和附件链接，可在编辑与预览之间切换。
+- **个人草稿与共享版本**：编辑内容自动保存为个人草稿，点击“保存共享版本”后向其他成员发布；版本冲突时保留本地内容。
+- **版本历史**：查看历史正文并恢复为新的共享版本，保留已有历史记录。
+- **账号与权限**：管理用户和用户组，按知识库或页面授予查看、编辑和管理权限；页面支持继承权限或独立授权。
+- **内容查找**：支持全局搜索、人员筛选、最近访问和“与我共享”入口。
+- **附件与回收站**：上传和下载附件，附件访问遵循页面权限；删除前预览影响范围，删除后可通过回收站恢复。
+- **审计与系统状态**：查看操作日志、维护模式、后台任务及附件磁盘可用空间，支持手动重试任务。
+- **响应式界面**：适配桌面、平板和手机，支持键盘操作及减少动态效果设置。
 
-环境版本见 dependency.txt 和 docs/TOOLCHAIN.md。安装 Rust 后将 `$HOME/.cargo/bin` 加入 PATH。
+![Build-a-Wiki 工作区](docs/ui/desktop.png)
+
+## 技术栈
+
+| 层级 | 技术 |
+| --- | --- |
+| 前端 | React、TypeScript、Vite、Ant Design、Tiptap |
+| 后端 | Rust、Axum、Tokio、SQLx |
+| 数据库 | PostgreSQL |
+| 部署 | Docker Compose、Nginx、HTTPS |
+
+工具链版本见 [dependency.txt](dependency.txt) 和 [工具链说明](docs/TOOLCHAIN.md)。
+
+## 本地运行
+
+以下步骤适用于 Ubuntu 22.04 或相应 WSL 环境。请先安装 Node.js、npm 和 Rust，并确保 `cargo` 在 `PATH` 中。所有命令均从仓库根目录执行，另有说明的除外。
+
+### 1. 准备数据库和环境配置
 
 ```bash
-# Ubuntu 22.04，需系统安装权限
 sudo apt-get install build-essential pkg-config libssl-dev postgresql-14 postgresql-client-14
 sudo bash scripts/dev-db.sh
 cp .env.example .env
+
+export PATH="$HOME/.cargo/bin:$PATH"
 set -a
 source .env
 set +a
 mkdir -p .data/attachments
+
 (cd frontend && npm ci)
 make migrate
-# 首次部署：从受限密码文件读取初始化管理员密码（仅成功一次）
-cargo run --manifest-path backend/Cargo.toml --bin bootstrap -- admin < /path/to/password-file
-# 终端1（从根目录启动，附件路径相对根目录）
-cargo run --manifest-path backend/Cargo.toml --bin wiki-api
-# 终端2
-cd frontend && npm run dev
 ```
 
-访问 http://127.0.0.1:5173，Vite 将 API 和健康请求转发到 8080。只在本机开发使用示例密码；勿将数据库端口开放给普通客户端。
+`.env.example` 中的数据库凭据仅用于本机开发。已有 `.env` 时直接检查配置，无需覆盖。数据库迁移需在启动后端前执行；已有实例升级时也应先应用迁移。
 
-## 验证
+### 2. 初始化管理员
+
+首次运行时，将至少 12 个字符的管理员密码存入权限为 `600` 的本地文件，再执行：
 
 ```bash
-# 先加载 .env，测试明确使用 wiki_test 而非 wiki_dev
-make check
-# 修改 HTTP 契约后重新生成并审查 diff
-bash scripts/contracts.sh --write
+cargo run --locked --manifest-path backend/Cargo.toml --bin bootstrap -- admin < /path/to/password-file
 ```
 
-集成测试为每次运行创建独立随机 schema，成功后清理；失败保留 schema 供诊断。测试环境缺失必须失败，不能静默跳过。CI 使用独立 PostgreSQL 服务，执行相同脚本。迁移命令可重复执行，服务启动不偷偷迁移；迁移未完成时 readiness 返回503。
+初始化仅允许成功一次。已有账号的实例无需重复执行，登录后可在账号管理界面添加用户。
 
-## 文档
+### 3. 启动服务
 
-- docs/CHECKLIST.md：逐项完成证据
-- docs/DECISIONS.md：领域、权限、事务与接口规则
-- docs/ACCEPTANCE.md：完整业务验收规格，后续任务执行
-- docs/BODY_SCHEMA.md：编辑器契约及边界
-- docs/openapi.json：从 Rust 类型与路由注解生成的接口契约
-- docs/licenses.json：依赖版本与许可证元数据
+后端终端需先加载根目录的 `.env`：
 
-进入知识库后可创建页面或子页面。编辑会自动保存个人草稿；只有“保存共享版本”才会向其他成员发布。版本冲突会保留本地内容，可查看最新正文并复制或明确采用新基准重试。历史恢复生成新版本，个人草稿由用户选择保留或丢弃。移动需要管理整棵子树、可编辑目标位置，并先确认权限变化预览；页面 URL 始终不变。
+```bash
+set -a
+source .env
+set +a
+cargo run --locked --manifest-path backend/Cargo.toml --bin wiki-api
+```
 
-运行 `make migrate` 应用 0004～0012 增量迁移后再启动后端。已有账号和知识库保留；无需重新初始化管理员。所有正文、历史、草稿、目录和最近访问入口均按当前权限鉴权。
+在另一个终端启动前端：
 
-真实浏览器验收：安装 `cd frontend && npx playwright install --with-deps chromium` 后，先 `cargo build --manifest-path backend/Cargo.toml`，再从根目录运行 `TEST_DATABASE_URL=... python3 scripts/e2e.py`。脚本自行初始化随机schema/管理员密码并启动服务，成功后清理，失败保留schema和trace诊断。身份配置和权限规则见 docs/IDENTITY.md。
+```bash
+cd frontend
+npm run dev
+```
 
-部署、离线包、备份恢复与故障诊断：[运维手册](docs/OPERATIONS.md)。实际性能、恢复和故障结果分别见 docs/benchmark-optimized.json、docs/recovery-drill.json、docs/fault-drill.json。
+浏览器访问 **http://127.0.0.1:5173**。前端开发服务将 API 请求转发至后端 `8080` 端口。WSL 环境下可通过 Windows 浏览器访问同一地址。
 
-当前已完成T01～T58，提供0.1.0-rc1发布候选；T59真实试用及T60正式发布尚待完成，入口和反馈流程见[试用记录](docs/TRIAL.md)。
+后端就绪检查：
+
+```bash
+curl http://127.0.0.1:8080/health/ready
+```
+
+## 部署与运维
+
+支持 Docker Compose 和离线镜像包部署。正式部署需要配置 HTTPS、数据库凭据、附件存储和备份策略，具体步骤见 [安装与运维手册](docs/OPERATIONS.md)。手册还包含账号管理、备份恢复、维护模式及故障诊断说明。
+
+## 测试
+
+加载 `.env` 后运行：
+
+```bash
+make check
+```
+
+该命令检查前端类型、格式、测试与构建，执行 Rust 检查和测试，并验证 API 契约。数据库测试使用 `TEST_DATABASE_URL` 指定的测试库，不应指向业务数据库。
+
+浏览器测试：
+
+```bash
+(cd frontend && npx playwright install --with-deps chromium)
+cargo build --locked --manifest-path backend/Cargo.toml
+python3 scripts/e2e.py
+```
+
+浏览器测试脚本创建隔离的数据和临时服务，成功后清理；失败时保留测试 schema 和诊断记录。
+
+## 相关文档
+
+- [安装、部署与运维](docs/OPERATIONS.md)
+- [身份认证与权限规则](docs/IDENTITY.md)
+- [富文本内容格式](docs/BODY_SCHEMA.md)
+- [OpenAPI 接口定义](docs/openapi.json)
+- [依赖与许可证清单](docs/licenses.json)
