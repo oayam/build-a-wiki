@@ -98,19 +98,22 @@ test("page metadata and a live six-level outline follow the saved document", asy
   }
   await page.setViewportSize(desktop);
   const editor = page.locator(".tiptap");
+  const headingTool = page
+    .getByRole("toolbar", { name: "正文格式" })
+    .getByRole("button", { name: "标题", exact: true });
   await expect(editor).toHaveAttribute("contenteditable", "true");
   await editor.click();
   const titles = [
-    "总览",
+    "# 总览",
     "设计",
     "重复标题",
     "实现细节与边界条件的完整说明：多层章节、长标题的换行和跳转后的可见范围",
-    "验证方法",
+    "## 验证方法",
     "重复标题",
   ];
   for (const [index, title] of titles.entries()) {
     await page.keyboard.type("#".repeat(index + 1) + " ");
-    await page.keyboard.insertText(title);
+    await page.keyboard.type(title);
     await expect(
       editor.getByRole("heading", {
         level: index + 1,
@@ -118,13 +121,27 @@ test("page metadata and a live six-level outline follow the saved document", asy
         exact: true,
       }),
     ).toBeVisible();
+    await expect(headingTool).toHaveAttribute("aria-pressed", "true");
     await page.keyboard.press("Enter");
+    await expect(headingTool).toHaveAttribute("aria-pressed", "false");
     await page.keyboard.insertText(
       "正文段落。".repeat(index === 2 || index === 3 ? 800 : 1),
     );
     await page.keyboard.press("Enter");
   }
   const marks = nav.getByRole("button");
+  await editor.getByRole("heading", { level: 1 }).click();
+  await expect(headingTool).toHaveAttribute("aria-pressed", "true");
+  await headingTool.click();
+  await expect(
+    editor.locator("p").filter({ hasText: titles[0] }),
+  ).toBeVisible();
+  await expect(headingTool).toHaveAttribute("aria-pressed", "false");
+  await headingTool.click();
+  await expect(
+    editor.getByRole("heading", { level: 2, name: titles[0] }),
+  ).toBeVisible();
+  await page.keyboard.press("Control+Alt+1");
   await expect(marks).toHaveCount(6);
   const lines = await marks
     .locator("span")
@@ -155,6 +172,9 @@ test("page metadata and a live six-level outline follow the saved document", asy
   await expect(timestamp).toBeVisible();
   await expect(timestamp).not.toHaveAttribute("datetime", created!);
   await page.reload();
+  await expect(
+    editor.getByRole("heading", { level: 1, name: titles[0], exact: true }),
+  ).toBeVisible();
   await expect(views).toHaveText("2");
   await expect(marks).toHaveCount(6);
   const visibleMarks = nav.locator("button[data-visible]");

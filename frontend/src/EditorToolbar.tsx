@@ -12,7 +12,7 @@ export default function EditorToolbar({ editor }: { editor: Editor | null }) {
       bold: e?.isActive("bold"),
       italic: e?.isActive("italic"),
       strike: e?.isActive("strike"),
-      heading: e?.isActive("heading", { level: 2 }),
+      heading: e?.isActive("heading"),
       bullet: e?.isActive("bulletList"),
       ordered: e?.isActive("orderedList"),
       taskList: e?.isActive("taskList"),
@@ -53,8 +53,13 @@ export default function EditorToolbar({ editor }: { editor: Editor | null }) {
       >
         {tool(
           "标题",
-          <span className="heading-tool">H₂</span>,
-          () => editor?.chain().focus().toggleHeading({ level: 2 }).run(),
+          <span className="heading-tool">H</span>,
+          () => {
+            if (!editor) return;
+            const chain = editor.chain().focus();
+            if (editor.isActive("heading")) return chain.setParagraph().run();
+            return chain.setHeading({ level: 2 }).run();
+          },
           state?.heading,
         )}
         <span className="tool-divider" />
