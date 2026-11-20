@@ -1,6 +1,8 @@
 import sharedFixture from "../../fixtures/body-v1.json";
 import { getSchema, type JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import { TaskList } from "@tiptap/extension-list";
+import { MarkdownTaskItem } from "./taskItem";
 import { TableKit } from "@tiptap/extension-table";
 import Image from "@tiptap/extension-image";
 export const extensions = [
@@ -8,6 +10,8 @@ export const extensions = [
     trailingNode: false,
     link: { openOnClick: false, protocols: ["https", "http", "mailto"] },
   }),
+  TaskList,
+  MarkdownTaskItem,
   TableKit,
   Image,
 ];

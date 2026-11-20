@@ -6,6 +6,7 @@ const BLOCKS: &[&str] = &[
     "blockquote",
     "bulletList",
     "orderedList",
+    "taskList",
     "codeBlock",
     "horizontalRule",
     "table",
@@ -39,6 +40,7 @@ fn node(v: &Value, depth: usize, text: &mut Vec<String>) -> Result<()> {
     let allowed = match t {
         "heading" => &["level"][..],
         "orderedList" => &["start", "type"][..],
+        "taskItem" => &["checked"][..],
         "codeBlock" => &["language"][..],
         "tableCell" | "tableHeader" => &["colspan", "rowspan", "colwidth", "align"][..],
         "image" => &["src", "alt", "title", "width", "height"][..],
@@ -48,6 +50,9 @@ fn node(v: &Value, depth: usize, text: &mut Vec<String>) -> Result<()> {
         keys(a, allowed)?;
     }
     match t {
+        "taskItem" if v["attrs"].get("checked").is_some_and(|c| !c.is_boolean()) => {
+            return Err(invalid());
+        }
         "heading" => {
             if !v["attrs"]["level"]
                 .as_i64()
@@ -198,7 +203,8 @@ fn node(v: &Value, depth: usize, text: &mut Vec<String>) -> Result<()> {
         "bulletList" | "orderedList" => {
             !children.is_empty() && children.iter().all(|c| c["type"] == "listItem")
         }
-        "listItem" => {
+        "taskList" => !children.is_empty() && children.iter().all(|c| c["type"] == "taskItem"),
+        "listItem" | "taskItem" => {
             children.first().is_some_and(|c| c["type"] == "paragraph")
                 && children
                     .iter()
@@ -256,6 +262,18 @@ mod tests {
             validate(1, &f["body"]).unwrap(),
             f["text"].as_str().unwrap()
         );
+    }
+    #[test]
+    fn validates_task_items_and_extracts_their_text() {
+        let mut body = json!({"type":"doc","content":[{"type":"taskList","content":[
+            {"type":"taskItem","attrs":{"checked":true},"content":[{"type":"paragraph","content":[{"type":"text","text":"已完成"}]}]},
+            {"type":"taskItem","content":[{"type":"paragraph","content":[{"type":"text","text":"下一步"}]}]}
+        ]}]});
+        assert_eq!(validate(1, &body).unwrap(), "已完成\n下一步");
+        body["content"][0]["content"][0]["attrs"]["checked"] = json!("true");
+        assert!(validate(1, &body).is_err());
+        body["content"][0]["content"][0] = json!({"type":"paragraph"});
+        assert!(validate(1, &body).is_err());
     }
     #[test]
     fn rejects_invalid_content() {

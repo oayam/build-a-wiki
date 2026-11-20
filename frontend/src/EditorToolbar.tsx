@@ -15,6 +15,7 @@ export default function EditorToolbar({ editor }: { editor: Editor | null }) {
       heading: e?.isActive("heading", { level: 2 }),
       bullet: e?.isActive("bulletList"),
       ordered: e?.isActive("orderedList"),
+      taskList: e?.isActive("taskList"),
       quote: e?.isActive("blockquote"),
       code: e?.isActive("codeBlock"),
       link: e?.isActive("link"),
@@ -123,6 +124,12 @@ export default function EditorToolbar({ editor }: { editor: Editor | null }) {
           <span>1≡</span>,
           () => editor?.chain().focus().toggleOrderedList().run(),
           state?.ordered,
+        )}
+        {tool(
+          "待办列表",
+          <Icon name="checklist" />,
+          () => editor?.chain().focus().toggleTaskList().run(),
+          state?.taskList,
         )}
         {tool("分隔线", <span>―</span>, () =>
           editor?.chain().focus().setHorizontalRule().run(),

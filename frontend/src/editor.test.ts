@@ -36,6 +36,8 @@ describe("schema v1", () => {
         "tableCell",
         "tableHeader",
         "tableRow",
+        "taskItem",
+        "taskList",
         "text",
       ].sort(),
     );

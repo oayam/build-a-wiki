@@ -33,7 +33,12 @@ type List = components["schemas"]["PageList"];
 type Summary = components["schemas"]["PageSummary"];
 const EMPTY_DOCUMENT_MESSAGE = "空空如也";
 const DOCUMENT_PANEL_LABEL = "页面内容";
-const VISIBLE_BLOCK_TYPES = new Set(["image", "horizontalRule", "table"]);
+const VISIBLE_BLOCK_TYPES = new Set([
+  "image",
+  "horizontalRule",
+  "table",
+  "taskList",
+]);
 function hasVisibleBody(node: JSONContent): boolean {
   return (
     Boolean(node.text?.trim()) ||

@@ -604,6 +604,22 @@ main .ant-alert {
 .tiptap p {
   margin: 10px 0;
 }
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-inline-start: 0;
+}
+.tiptap ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+}
+.tiptap ul[data-type="taskList"] > li > div {
+  flex: 1;
+  min-width: 0;
+}
+.tiptap ul[data-type="taskList"] > li > div > p:first-child {
+  margin-top: 0;
+}
 .tiptap blockquote {
   margin: 18px 0;
   padding: 14px 22px;

@@ -6,6 +6,61 @@ async function login(p: Page) {
   await p.getByRole("button", { name: /登\s*录/ }).click();
   await expect(p.getByRole("heading", { name: "我的知识库" })).toBeVisible();
 }
+test("Markdown tasks keep their checked state across saves and history restore", async ({
+  page,
+}) => {
+  await login(page);
+  await page.getByLabel("知识库名称", { exact: true }).fill("待办验收库");
+  await page.getByRole("button", { name: "新建私有知识库" }).click();
+  await page.getByRole("link", { name: "待办验收库", exact: true }).click();
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: "创建页面", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "创建页面" });
+  await dialog.getByLabel("新建页面标题").fill("事项清单");
+  await dialog.getByRole("button", { name: "确认创建" }).click();
+  const edit = page.getByRole("button", { name: "编辑页面", exact: true });
+  const save = page.getByRole("button", { name: "保存", exact: true });
+  await edit.click();
+  const editor = page.locator(".tiptap");
+  await editor.click();
+  await page.keyboard.type("- plain bullet");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("- [ ] first task");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("- [x] second task");
+  const first = editor.getByRole("checkbox", { name: "first task" });
+  const second = editor.getByRole("checkbox", { name: "second task" });
+  await expect(first).not.toBeChecked();
+  await expect(second).toBeChecked();
+  await expect(editor.locator("ul:not([data-type]) > li")).toHaveText(
+    "plain bullet",
+  );
+  await page.getByRole("button", { name: /预\s*览/, exact: true }).click();
+  await first.click();
+  await expect(first).not.toBeChecked();
+  await save.click();
+  await expect(edit).toBeVisible();
+  await page.reload();
+  await expect(second).toBeChecked();
+  await first.click();
+  await expect(first).not.toBeChecked();
+  await edit.click();
+  await first.check();
+  await save.click();
+  await expect(edit).toBeVisible();
+  await expect(first).toBeChecked();
+  await page.getByRole("button", { name: "页面设置" }).click();
+  await page.getByRole("link", { name: "版本历史" }).click();
+  await page.getByRole("button", { name: "查看版本2", exact: true }).click();
+  await page.getByRole("button", { name: "恢复此版本" }).click();
+  await page.getByRole("button", { name: /确\s*定/ }).click();
+  await expect(page.getByText(/已恢复为新版本/)).toBeVisible();
+  await page.getByRole("link", { name: "返回页面" }).click();
+  await expect(second).toBeChecked();
+  await expect(first).not.toBeChecked();
+});
 for (const width of [1440, 390]) {
   test(`the empty library stays in place from its first frame at ${width}px`, async ({
     page,

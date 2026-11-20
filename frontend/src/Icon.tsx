@@ -21,6 +21,7 @@ const paths = {
   link: "m10 13 4-4m-6 7-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m2 1 2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0",
   table: "M3 3h18v18H3V3Zm0 6h18M9 3v18M3 15h18",
   list: "M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1",
+  checklist: "m3 6 2 2 4-5M12 6h9M3 14h5v5H3zM12 17h9",
   quote: "M4 6h6v8H4v-4l3-4m-3 8v4h4m6-12h6v8h-6v-4l3-4m-3 8v4h4",
   undo: "M3 4v6h6M3 10a8 8 0 1 1 1 9",
   redo: "M21 4v6h-6m6 0a8 8 0 1 0-1 9",
