@@ -75,6 +75,70 @@ test("topbar pin persists and the hover delay cancels on exit", async ({
   await expect(pin).toHaveAttribute("aria-pressed", "true");
 });
 
+test("breadcrumb and upper hover bands keep independent continuous dwell times", async ({
+  page,
+}) => {
+  const dock = page.locator(".topbar-dock");
+  const crumb = page.getByRole("navigation", { name: "页面路径" });
+  await page.getByRole("button", { name: "固定顶部栏" }).click();
+  const row = (await crumb.boundingBox())!;
+  const home = (await crumb
+    .getByRole("link", { name: "返回工作台" })
+    .boundingBox())!;
+  const fast = Math.floor(home.y) - 1;
+  const slow = Math.ceil(home.y);
+  const bottom = Math.floor(row.y + row.height);
+  const outside = () => page.mouse.move(400, bottom + 20);
+  const mode = () => dock.getAttribute("data-mode");
+  await outside();
+  await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T00:01:00Z"));
+
+  // Cross the sidebar/content boundary and both vertical bands without leaving the union.
+  await page.mouse.move(50, bottom - 1);
+  await page.clock.runFor(1700);
+  await page.mouse.move(home.x, fast);
+  await page.clock.runFor(700);
+  await page.mouse.move(50, slow);
+  await page.clock.runFor(599);
+  expect(await mode()).toBe("hidden");
+  await page.clock.runFor(1);
+  await expect(dock).toHaveAttribute("data-mode", "revealed");
+  await outside();
+  await expect(dock).toHaveAttribute("data-mode", "hidden");
+
+  // Going below the row cancels both timers. Re-entering the row cancels only the fast timer.
+  await page.mouse.move(50, slow);
+  await page.clock.runFor(2900);
+  await page.mouse.move(50, bottom + 1);
+  await page.clock.runFor(200);
+  await page.mouse.move(50, fast);
+  await page.clock.runFor(800);
+  await page.mouse.move(home.x, slow);
+  await page.clock.runFor(300);
+  await page.mouse.move(home.x, fast);
+  await page.clock.runFor(999);
+  expect(await mode()).toBe("hidden");
+  await page.clock.runFor(1);
+  await expect(dock).toHaveAttribute("data-mode", "revealed");
+  await outside();
+  await expect(dock).toHaveAttribute("data-mode", "hidden");
+
+  // Long documents still have a hover target at the screen edge once the path scrolls away.
+  await page.setViewportSize({ width: 1000, height: 260 });
+  await page.evaluate(() =>
+    window.scrollTo(0, document.documentElement.scrollHeight),
+  );
+  await expect
+    .poll(() => crumb.evaluate((el) => el.getBoundingClientRect().bottom))
+    .toBeLessThan(0);
+  await page.mouse.move(50, slow);
+  await page.clock.runFor(2999);
+  expect(await mode()).toBe("hidden");
+  await page.clock.runFor(1);
+  await expect(dock).toHaveAttribute("data-mode", "revealed");
+});
+
 test.describe("touch topbar", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
   test("the top edge opens with a tap and an outside tap dismisses it", async ({

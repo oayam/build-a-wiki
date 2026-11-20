@@ -48,6 +48,7 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   const [createLibrary, setCreateLibrary] = React.useState(false);
   const [createTarget, setCreateTarget] = React.useState<CreatePageTarget>();
   const [topInset, setTopInset] = React.useState(0);
+  const breadcrumb = React.useRef<HTMLElement>(null);
   const [more, setMore] = React.useState<K[]>([]);
   const [next, setNext] = React.useState<string | null>();
   const [loadingMore, setLoadingMore] = React.useState(false);
@@ -141,7 +142,11 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
         }
         onClickCapture={captureDialogTrigger}
       >
-        <WorkspaceTopbar key={user.id} onInsetChange={setTopInset} />
+        <WorkspaceTopbar
+          key={user.id}
+          breadcrumb={breadcrumb}
+          onInsetChange={setTopInset}
+        />
         <aside className="sidebar" aria-label="知识库导航">
           <div className="sidebar-heading">
             <Link
@@ -310,7 +315,11 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
           />
         )}
         <div className="content">
-          <nav className="workspace-crumb" aria-label="页面路径">
+          <nav
+            ref={breadcrumb}
+            className="workspace-crumb"
+            aria-label="页面路径"
+          >
             <Link to={HOME_ROUTE} aria-label="返回工作台">
               <Icon name="home" />
             </Link>

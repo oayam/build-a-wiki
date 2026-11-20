@@ -9,8 +9,10 @@ export const WorkspaceTopInset = React.createContext(0);
 type Mode = "pinned" | "hidden" | "revealed";
 
 export default function WorkspaceTopbar({
+  breadcrumb,
   onInsetChange,
 }: {
+  breadcrumb: React.RefObject<HTMLElement | null>;
   onInsetChange: (height: number) => void;
 }) {
   const { user } = useSession();
@@ -28,7 +30,7 @@ export default function WorkspaceTopbar({
   const bar = React.useRef<HTMLElement>(null);
   const edge = React.useRef<HTMLButtonElement>(null);
   const search = React.useRef<InputRef>(null);
-  const hoverTimer = React.useRef<number | undefined>(undefined);
+  const hoverY = React.useRef<number | null>(null);
   const visible = mode !== "hidden";
 
   React.useLayoutEffect(() => {
@@ -40,13 +42,77 @@ export default function WorkspaceTopbar({
     return () => observer.disconnect();
   }, [visible, onInsetChange]);
 
-  function cancelHover() {
-    window.clearTimeout(hoverTimer.current);
-  }
-  React.useEffect(() => cancelHover, []);
+  React.useEffect(() => {
+    if (mode !== "hidden") return;
+    const row = breadcrumb.current;
+    const home = row?.firstElementChild;
+    const strip = dock.current;
+    if (!row || !home || !strip) return;
+
+    let bandTimer: number | undefined;
+    let aboveTimer: number | undefined;
+    const open = () =>
+      setMode((current) => (current === "hidden" ? "revealed" : current));
+    function dwell(inside: boolean, timer: number | undefined, delay: number) {
+      if (inside) return timer ?? window.setTimeout(open, delay);
+      window.clearTimeout(timer);
+    }
+    const update = () => {
+      const y = hoverY.current;
+      if (y === null) return;
+      const box = row.getBoundingClientRect();
+      const stripBottom = strip.getBoundingClientRect().bottom;
+      // When the breadcrumb scrolls away, keep its bands at the viewport edge.
+      const top =
+        box.bottom <= stripBottom || box.top >= window.innerHeight
+          ? stripBottom
+          : box.top;
+      const pathTop = Math.max(
+        stripBottom,
+        top + home.getBoundingClientRect().top - box.top,
+      );
+      bandTimer = dwell(y >= 0 && y <= top + box.height, bandTimer, 3000);
+      aboveTimer = dwell(y >= 0 && y < pathTop, aboveTimer, 1000);
+    };
+    const clear = () => {
+      hoverY.current = null;
+      window.clearTimeout(bandTimer);
+      window.clearTimeout(aboveTimer);
+      bandTimer = aboveTimer = undefined;
+    };
+    function track(event: PointerEvent) {
+      if (event.pointerType === "touch" || event.buttons) return clear();
+      hoverY.current = event.clientY;
+      update();
+    }
+    function leave(event: PointerEvent) {
+      if (!event.relatedTarget) clear();
+    }
+    update();
+    const controller = new AbortController();
+    const options = { signal: controller.signal, passive: true };
+    window.addEventListener("pointermove", track, options);
+    window.addEventListener("pointerup", track, options);
+    window.addEventListener("pointerdown", clear, options);
+    window.addEventListener("pointerout", leave, options);
+    window.addEventListener("pointercancel", clear, options);
+    window.addEventListener("blur", clear, options);
+    window.addEventListener("resize", update, options);
+    window.addEventListener("scroll", update, options);
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.hidden) clear();
+      },
+      options,
+    );
+    return () => {
+      controller.abort();
+      clear();
+    };
+  }, [mode, breadcrumb]);
 
   function reveal() {
-    cancelHover();
     flushSync(() =>
       setMode((previous) => (previous === "hidden" ? "revealed" : previous)),
     );
@@ -72,11 +138,17 @@ export default function WorkspaceTopbar({
     return () => document.removeEventListener("pointerdown", outside);
   }, [mode]);
 
-  function togglePin(keyboard: boolean) {
-    cancelHover();
+  function togglePin(event: React.MouseEvent<HTMLButtonElement>) {
     const hide = mode === "pinned";
+    if (
+      hide &&
+      "pointerType" in event.nativeEvent &&
+      event.nativeEvent.pointerType === "mouse"
+    )
+      hoverY.current = event.clientY;
     flushSync(() => setMode(hide ? "hidden" : "pinned"));
-    if (hide && keyboard) edge.current?.focus({ preventScroll: true });
+    if (hide && event.detail === 0)
+      edge.current?.focus({ preventScroll: true });
     try {
       if (hide) localStorage.setItem(preference, "1");
       else localStorage.removeItem(preference);
@@ -90,17 +162,7 @@ export default function WorkspaceTopbar({
       ref={dock}
       className="topbar-dock"
       data-mode={mode}
-      onPointerEnter={(event) => {
-        if (mode === "hidden" && event.pointerType !== "touch") {
-          cancelHover();
-          hoverTimer.current = window.setTimeout(
-            () => setMode("revealed"),
-            1000,
-          );
-        }
-      }}
       onPointerLeave={(event) => {
-        cancelHover();
         if (
           mode === "revealed" &&
           event.pointerType !== "touch" &&
@@ -178,7 +240,7 @@ export default function WorkspaceTopbar({
             aria-pressed={mode === "pinned"}
             title={mode === "pinned" ? "取消固定顶部栏" : "固定顶部栏"}
             icon={<Icon name="pin" />}
-            onClick={(event) => togglePin(event.detail === 0)}
+            onClick={togglePin}
           />
           <Account />
         </div>
