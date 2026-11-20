@@ -12,14 +12,46 @@ use axum::{
     routing::{get, put},
 };
 use uuid::Uuid;
-#[utoipa::path(put,operation_id="record_visit",path="/api/v1/pages/{id}/visit",responses((status=200,body=serde_json::Value)))]
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct RecordedVisit {
+    pub ok: bool,
+    pub view_count: i64,
+}
+#[utoipa::path(put,operation_id="record_visit",path="/api/v1/pages/{id}/visit",responses((status=200,body=RecordedVisit)))]
 pub async fn visit(
     State(s): State<AppState>,
     Extension(id): Extension<RequestId>,
     h: HeaderMap,
     Path(p): Path<Uuid>,
 ) -> Response {
-    response(async{let(mut tx,u)=transaction(&s,&h,true).await?;require(&mut tx,&u,p,true,1).await?;sqlx::query("INSERT INTO recent_visits(user_id,page_id) VALUES($1,$2) ON CONFLICT(user_id,page_id) DO UPDATE SET visited_at=now()").bind(u.id).bind(p).execute(&mut *tx).await?;tx.commit().await?;Ok(serde_json::json!({"ok":true}))}.await,&id)
+    response(
+        async {
+            let (mut tx, u) = transaction(&s, &h, true).await?;
+            require(&mut tx, &u, p, true, 1).await?;
+            sqlx::query(
+                "INSERT INTO recent_visits(user_id, page_id) VALUES ($1, $2)
+                     ON CONFLICT(user_id, page_id) DO UPDATE
+                     SET visited_at=now(), view_count=recent_visits.view_count+1",
+            )
+            .bind(u.id)
+            .bind(p)
+            .execute(&mut *tx)
+            .await?;
+            let view_count = sqlx::query_scalar(
+                "SELECT sum(view_count)::bigint FROM recent_visits WHERE page_id=$1",
+            )
+            .bind(p)
+            .fetch_one(&mut *tx)
+            .await?;
+            tx.commit().await?;
+            Ok(RecordedVisit {
+                ok: true,
+                view_count,
+            })
+        }
+        .await,
+        &id,
+    )
 }
 #[utoipa::path(get,operation_id="recent_visits",path="/api/v1/recent-visits",responses((status=200,body=Vec<PageLink>)))]
 pub async fn list(

@@ -341,15 +341,26 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
     assert_eq!(restored_page["title"], "根页面");
     assert_eq!(restored_page["body"], original);
     assert_eq!(restored_page["body_text"], old["body_text"]);
+    assert_eq!(restored_page["author_name"], "编辑者");
+    assert_eq!(
+        restored_page["last_edited_at"],
+        history["items"][0]["created_at"]
+    );
+    assert_eq!(restored_page["view_count"], 0);
     let (_, results, _) = request(&app, "GET", search_path, json!({}), &ec, et, O).await;
     assert_eq!(results["items"][0]["id"], pid);
     assert_eq!(results["items"][0]["snippet"], old["body_text"]);
-    assert_eq!(
-        request(&app, "PUT", &format!("{path}/visit"), json!({}), &ec, et, O)
-            .await
-            .0,
-        200
+    let visit = format!("{path}/visit");
+    let (first, second) = tokio::join!(
+        request(&app, "PUT", &visit, json!({}), &ec, et, O),
+        request(&app, "PUT", &visit, json!({}), &ec, et, O)
     );
+    assert_eq!((first.0, second.0), (200, 200));
+    let (_, visit, _) = request(&app, "PUT", &visit, json!({}), &c, t, O).await;
+    assert_eq!(visit["view_count"], 3);
+    let (_, viewed, _) = request(&app, "GET", &path, json!({}), &ec, et, O).await;
+    assert_eq!(viewed["view_count"], 3);
+    assert_eq!(viewed["last_edited_at"], restored_page["last_edited_at"]);
     assert_eq!(
         request(&app, "GET", "/api/v1/recent-visits", json!({}), &ec, et, O)
             .await

@@ -1759,7 +1759,9 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RecordedVisit"
+                }
               }
             }
           }
@@ -2574,9 +2576,15 @@
           "body_text",
           "role",
           "lock_version",
-          "editor_id"
+          "editor_id",
+          "author_name",
+          "last_edited_at",
+          "view_count"
         ],
         "properties": {
+          "author_name": {
+            "type": "string"
+          },
           "body": {},
           "body_text": {
             "type": "string"
@@ -2596,6 +2604,9 @@
           "knowledge_base_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "last_edited_at": {
+            "type": "string"
           },
           "lock_version": {
             "type": "integer",
@@ -2618,6 +2629,10 @@
           },
           "title": {
             "type": "string"
+          },
+          "view_count": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -2796,6 +2811,22 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "RecordedVisit": {
+        "type": "object",
+        "required": [
+          "ok",
+          "view_count"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "view_count": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

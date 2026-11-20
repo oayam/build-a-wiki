@@ -644,9 +644,7 @@ main .ant-alert {
 .tiptap > :first-child {
   margin-top: 0;
 }
-.tiptap h1,
-.tiptap h2,
-.tiptap h3 {
+.tiptap :is(h1, h2, h3, h4, h5, h6) {
   position: relative;
   line-height: 1.45;
   margin: 25px 0 12px;
@@ -666,6 +664,15 @@ main .ant-alert {
   color: #5e93f5;
   margin-right: 9px;
   font-weight: 500;
+}
+.tiptap h4 {
+  font-size: 18px;
+}
+.tiptap h5 {
+  font-size: 16px;
+}
+.tiptap h6 {
+  font-size: 15px;
 }
 .tiptap p {
   margin: 10px 0;
@@ -976,7 +983,7 @@ summary:focus-visible {
   align-items: center;
   gap: 20px;
 }
-.document-header .document-heading {
+.document-header .document-heading-block {
   flex: 1;
   min-width: 0;
 }
@@ -984,10 +991,16 @@ summary:focus-visible {
   flex-shrink: 0;
   padding: 0;
 }
-.document-settings-trigger.ant-btn {
+.document-settings-trigger.ant-btn,
+.document-pin-trigger.ant-btn {
   width: 36px;
   padding: 0;
   color: #52739e;
+}
+.document-pin-trigger.ant-btn[aria-pressed="true"] {
+  color: var(--blue);
+  background: #edf3ff;
+  border-color: #aac5f6;
 }
 .document-settings-dropdown .ant-dropdown-menu {
   min-width: 180px;
@@ -1070,7 +1083,7 @@ summary:focus-visible {
     flex-wrap: wrap;
     gap: 12px;
   }
-  .document-header .document-heading {
+  .document-header .document-heading-block {
     flex-basis: 100%;
   }
   .document-header .document-actions {
@@ -1669,20 +1682,121 @@ summary:focus-visible {
 }
 
 .document-panel {
+  --document-sticky-top: var(--workspace-top);
   --document-panel-border: #e1e3e7;
   --document-panel-padding: 20px;
   --document-panel-radius: 10px;
   --document-body-spacing: 24px;
   --document-empty-color: #a5a9b1;
-  padding: var(--document-panel-padding);
+  padding: 0 var(--document-panel-padding) var(--document-panel-padding);
   border: 1px solid var(--document-panel-border);
   border-radius: var(--document-panel-radius);
   background: #fff;
 }
 .document-panel .document-header {
-  margin-bottom: var(--document-panel-padding);
+  padding-block: 14px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+.document-header[data-pinned] {
+  position: sticky;
+  top: var(--document-sticky-top);
+  z-index: 5;
+  max-height: 50dvh;
+  overflow-y: auto;
+}
+.document-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #566781;
+}
+.document-meta div {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.document-meta dt {
+  color: #687991;
+  white-space: nowrap;
+}
+.document-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.document-layout {
+  --outline-gap: 16px;
+  --outline-top: calc(
+    var(--document-sticky-top) + var(--pinned-header-height) +
+      var(--outline-gap)
+  );
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(8px, 1.5vw, 22px);
+}
+html:has(.document-outline) {
+  scrollbar-gutter: stable;
+}
+.document-layout .tiptap :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: var(--outline-top);
+}
+.document-layout:has(.document-outline) .document-canvas {
+  padding-bottom: max(
+    0px,
+    calc(
+      100dvh - var(--outline-top) - var(--outline-content-after-target, 100dvh)
+    )
+  );
+}
+.document-outline {
+  position: sticky;
+  top: var(--outline-top);
+  flex: 0 0 auto;
+  max-height: calc(100dvh - var(--outline-top) - 20px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  margin-top: var(--document-body-spacing);
+}
+.document-outline button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 48px;
+  height: 20px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.document-outline button span {
+  display: block;
+  margin-inline-start: auto;
+  height: 3px;
+  border-radius: 3px;
+  background: #a8b5c7;
+  transform-origin: right center;
+  transition: transform 150ms var(--motion-spring);
+}
+.document-outline button[data-visible] span {
+  background: var(--blue);
+}
+@media (hover: hover) {
+  .document-outline button:hover span {
+    transform: scaleX(1.15);
+  }
+}
+.document-outline button:is(:hover, :focus-visible) {
+  background: #eef4fc;
+  outline-offset: -2px;
 }
 .document-panel .document-canvas {
+  flex: 1;
+  min-width: 0;
   border: 0;
   outline: none;
   border-radius: 0;
@@ -1710,6 +1824,9 @@ summary:focus-visible {
   .document-panel {
     --document-panel-padding: 14px;
     --document-body-spacing: 20px;
+  }
+  .document-layout {
+    --outline-gap: 12px;
   }
 }
 

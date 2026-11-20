@@ -71,6 +71,9 @@ pub struct Page {
     pub role: i16,
     pub lock_version: i64,
     pub editor_id: Uuid,
+    pub author_name: String,
+    pub last_edited_at: String,
+    pub view_count: i64,
 }
 #[derive(Serialize, ToSchema)]
 pub struct PageDetail {
@@ -226,7 +229,16 @@ pub async fn read(
 ) -> Response {
     response(async{
  let(mut tx,u)=transaction(&s,&h,false).await?;require(&mut tx,&u,p,true,1).await?;
- let page=sqlx::query_as::<_,Page>("SELECT p.id,p.knowledge_base_id,CASE WHEN page_role($1,p.parent_id)>0 THEN p.parent_id ELSE NULL END parent_id,p.title,p.current_revision_id,r.schema_version,r.body_json body,p.body_text,page_role($1,p.id) role,p.lock_version,r.editor_id FROM pages p JOIN page_revisions r ON r.id=p.current_revision_id WHERE p.id=$2").bind(u.id).bind(p).fetch_one(&mut *tx).await?;
+ let page=sqlx::query_as::<_,Page>(r#"
+    SELECT p.id, p.knowledge_base_id,
+           CASE WHEN page_role($1,p.parent_id)>0 THEN p.parent_id ELSE NULL END parent_id,
+           p.title, p.current_revision_id, r.schema_version, r.body_json body, p.body_text,
+           page_role($1,p.id) role, p.lock_version, r.editor_id, author.display_name AS author_name,
+           to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS last_edited_at,
+           (SELECT COALESCE(sum(v.view_count), 0)::bigint FROM recent_visits v WHERE v.page_id=p.id) AS view_count
+    FROM pages p JOIN page_revisions r ON r.id=p.current_revision_id
+    JOIN users author ON author.id=p.created_by WHERE p.id=$2
+ "#).bind(u.id).bind(p).fetch_one(&mut *tx).await?;
  let breadcrumbs=sqlx::query_as::<_,PageLink>("WITH RECURSIVE a AS(SELECT id,parent_id,title,0 depth FROM pages WHERE id=$1 UNION ALL SELECT p.id,p.parent_id,p.title,a.depth+1 FROM pages p JOIN a ON p.id=a.parent_id WHERE a.depth<64) SELECT id,title FROM a WHERE page_role($2,id)>0 ORDER BY depth DESC").bind(p).bind(u.id).fetch_all(&mut *tx).await?;
  if u.is_system_admin{audit(&mut tx,Some(u.id),audit_action::PAGES_ADMIN_READ,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;}
  Ok(PageDetail{page,breadcrumbs})

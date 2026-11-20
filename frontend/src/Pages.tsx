@@ -8,6 +8,7 @@ import {
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import Icon from "./Icon";
 import EditorToolbar from "./EditorToolbar";
+import DocumentOutline from "./DocumentOutline";
 import { Collapse, MotionAlert, TreeRow } from "./Motion";
 import {
   OpenCreatePageDialog,
@@ -33,6 +34,10 @@ type List = components["schemas"]["PageList"];
 type Summary = components["schemas"]["PageSummary"];
 const EMPTY_DOCUMENT_MESSAGE = "空空如也";
 const DOCUMENT_PANEL_LABEL = "页面内容";
+const editTimeFormat = new Intl.DateTimeFormat("zh-CN", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
 const VISIBLE_BLOCK_TYPES = new Set([
   "image",
   "horizontalRule",
@@ -278,18 +283,35 @@ export function PageScreen() {
   const [data, setData] = React.useState<Detail>();
   const [error, setError] = React.useState("");
   React.useEffect(() => {
+    const controller = new AbortController();
     setData(undefined);
     setError("");
-    void request<Detail>(`/pages/${id}`)
+    void request<Detail>(`/pages/${id}`, "GET", undefined, controller.signal)
       .then((data) => {
+        if (controller.signal.aborted) return;
         setData(data);
-        void request(`/pages/${id}/visit`, "PUT").catch(() => {});
+        void request<components["schemas"]["RecordedVisit"]>(
+          `/pages/${id}/visit`,
+          "PUT",
+        )
+          .then(({ view_count }) => {
+            if (!controller.signal.aborted)
+              setData((current) =>
+                current && current.id === id && view_count > current.view_count
+                  ? { ...current, view_count }
+                  : current,
+              );
+          })
+          .catch(() => {});
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        if (!controller.signal.aborted) setError(e.message);
+      });
+    return () => controller.abort();
   }, [id]);
   return error ? (
     <Alert type="error" message={error} />
-  ) : data ? (
+  ) : data && data.id === id ? (
     <Document key={data.id} page={data} onSaved={setData} />
   ) : (
     <Spin />
@@ -305,6 +327,37 @@ function Document({
   const { user } = useSession();
   const [editing, setEditing] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const pinKey = `wiki:pinned-header:${user.id}:${page.id}`;
+  const [headerPinned, setHeaderPinned] = React.useState(() => {
+    try {
+      return localStorage.getItem(pinKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const headerRef = React.useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = React.useState(0);
+  const pinnedHeight = headerPinned ? headerHeight : 0;
+  React.useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!headerPinned || !header) return;
+    const measure = () =>
+      setHeaderHeight(header.getBoundingClientRect().height);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [headerPinned]);
+
+  function toggleHeaderPin() {
+    setHeaderPinned(!headerPinned);
+    try {
+      if (headerPinned) localStorage.removeItem(pinKey);
+      else localStorage.setItem(pinKey, "1");
+    } catch {
+      // The pin still works for this visit if browser storage is unavailable.
+    }
+  }
   const [title, setTitle] = React.useState(page.title);
   const [body, setBody] = React.useState<JSONContent>(page.body as JSONContent);
   const [dirty, setDirty] = React.useState(false);
@@ -490,31 +543,71 @@ function Document({
   }
   return (
     <>
-      <section className="document-panel" aria-label={DOCUMENT_PANEL_LABEL}>
-        <div className="document-header">
-          <div className="document-heading">
-            <div
-              className="document-title-slot"
-              key={editing && !preview ? "edit" : "read"}
-            >
-              {editing && !preview ? (
-                <Input
-                  className="document-title"
-                  aria-label="页面标题"
-                  disabled={!writable}
-                  value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    setDirty(true);
-                  }}
-                />
-              ) : (
-                <h1>{title}</h1>
-              )}
+      <section
+        className="document-panel"
+        aria-label={DOCUMENT_PANEL_LABEL}
+        style={
+          {
+            "--pinned-header-height": `${pinnedHeight}px`,
+          } as React.CSSProperties
+        }
+      >
+        <div
+          className="document-header"
+          ref={headerRef}
+          data-pinned={headerPinned || undefined}
+        >
+          <div className="document-heading-block">
+            <div className="document-heading">
+              <div
+                className="document-title-slot"
+                key={editing && !preview ? "edit" : "read"}
+              >
+                {editing && !preview ? (
+                  <Input
+                    className="document-title"
+                    aria-label="页面标题"
+                    disabled={!writable}
+                    value={title}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      setDirty(true);
+                    }}
+                  />
+                ) : (
+                  <h1>{title}</h1>
+                )}
+              </div>
+              <span className={`document-badge ${editing ? "is-draft" : ""}`}>
+                {editing
+                  ? !lease.active
+                    ? "编辑已暂停"
+                    : preview
+                      ? "预览"
+                      : "草稿"
+                  : "当前版本"}
+              </span>
             </div>
-            <span className={`document-badge ${editing ? "is-draft" : ""}`}>
-              {editing ? (!lease.active ? "编辑已暂停" : preview ? "预览" : "草稿") : "当前版本"}
-            </span>
+            <dl className="document-meta">
+              <div>
+                <dt>作者</dt>
+                <dd>{page.author_name ?? "—"}</dd>
+              </div>
+              <div>
+                <dt>最后编辑时间</dt>
+                <dd>
+                  <time dateTime={page.last_edited_at}>
+                    {page.last_edited_at
+                      ? editTimeFormat.format(new Date(page.last_edited_at))
+                      : "—"}
+                  </time>
+                </dd>
+              </div>
+              <div>
+                <dt>浏览量</dt>
+                <dd>{page.view_count ?? "—"}</dd>
+              </div>
+            </dl>
           </div>
           <Space wrap className="document-actions">
             {page.role >= 2 && !draft.ready && draft.status && (
@@ -583,6 +676,14 @@ function Document({
                 </Button>
               </>
             )}
+            <Button
+              className="document-pin-trigger"
+              aria-label="固定标题栏"
+              aria-pressed={headerPinned}
+              title={headerPinned ? "取消固定标题栏" : "固定标题栏"}
+              icon={<Icon name="pin" />}
+              onClick={toggleHeaderPin}
+            />
             <Dropdown
               trigger={["click"]}
               placement="bottomRight"
@@ -729,22 +830,25 @@ function Document({
             </Space>
           }
         />
-        <section
-          className={`document-canvas ${preview ? "preview" : editing ? "editing" : "reading"}`}
-          aria-label={preview ? "文档预览" : "文档正文"}
-        >
-          <Collapse open={writable && !preview} className="toolbar-motion">
-            <EditorToolbar editor={editor} />
-          </Collapse>
-          <div className="document-body">
-            <EditorContent editor={editor} />
-            {(!editing || preview) && !hasVisibleBody(body) && (
-              <span className="document-empty-hint">
-                {EMPTY_DOCUMENT_MESSAGE}
-              </span>
-            )}
-          </div>
-        </section>
+        <div className="document-layout">
+          <section
+            className={`document-canvas ${preview ? "preview" : editing ? "editing" : "reading"}`}
+            aria-label={preview ? "文档预览" : "文档正文"}
+          >
+            <Collapse open={writable && !preview} className="toolbar-motion">
+              <EditorToolbar editor={editor} />
+            </Collapse>
+            <div className="document-body">
+              <EditorContent editor={editor} />
+              {(!editing || preview) && !hasVisibleBody(body) && (
+                <span className="document-empty-hint">
+                  {EMPTY_DOCUMENT_MESSAGE}
+                </span>
+              )}
+            </div>
+          </section>
+          <DocumentOutline editor={editor} pinnedHeight={pinnedHeight} />
+        </div>
       </section>
       {editing && (
         <>

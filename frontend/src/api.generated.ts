@@ -806,6 +806,7 @@ export interface components {
       username: string;
     };
     Page: {
+      author_name: string;
       body: unknown;
       body_text: string;
       /** Format: uuid */
@@ -816,6 +817,7 @@ export interface components {
       id: string;
       /** Format: uuid */
       knowledge_base_id: string;
+      last_edited_at: string;
       /** Format: int64 */
       lock_version: number;
       /** Format: uuid */
@@ -825,6 +827,8 @@ export interface components {
       /** Format: int32 */
       schema_version: number;
       title: string;
+      /** Format: int64 */
+      view_count: number;
     };
     PageDetail: components["schemas"]["Page"] & {
       breadcrumbs: components["schemas"]["PageLink"][];
@@ -872,6 +876,11 @@ export interface components {
       display_name: string;
       /** Format: uuid */
       id: string;
+    };
+    RecordedVisit: {
+      ok: boolean;
+      /** Format: int64 */
+      view_count: number;
     };
     Restore: {
       /** Format: uuid */
@@ -2158,7 +2167,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["RecordedVisit"];
         };
       };
     };

@@ -6,6 +6,260 @@ async function login(p: Page) {
   await p.getByRole("button", { name: /登\s*录/ }).click();
   await expect(p.getByRole("heading", { name: "我的知识库" })).toBeVisible();
 }
+test("page metadata and a live six-level outline follow the saved document", async ({
+  page,
+}) => {
+  await login(page);
+  await page.getByLabel("知识库名称", { exact: true }).fill("正文目录验收");
+  await page.getByRole("button", { name: "新建私有知识库" }).click();
+  await page.getByRole("link", { name: "正文目录验收", exact: true }).click();
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: "创建页面", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "创建页面" });
+  await dialog.getByLabel("新建页面标题").fill("多层级文稿");
+  await dialog.getByRole("button", { name: "确认创建" }).click();
+  const meta = page.locator(".document-meta");
+  const header = page.locator(".document-header");
+  async function checkTitleSpacing() {
+    const gaps = await header.evaluate((el) => {
+      const panel = el.parentElement!;
+      const content = el.querySelector(".document-heading-block")!;
+      const actions = el.querySelector(".document-actions")!;
+      return {
+        top:
+          Math.min(
+            content.getBoundingClientRect().top,
+            actions.getBoundingClientRect().top,
+          ) -
+          panel.getBoundingClientRect().top -
+          panel.clientTop,
+        bottom:
+          el.getBoundingClientRect().bottom -
+          Math.max(
+            content.getBoundingClientRect().bottom,
+            actions.getBoundingClientRect().bottom,
+          ) -
+          parseFloat(getComputedStyle(el).borderBottomWidth),
+      };
+    });
+    expect(gaps.top).toBeCloseTo(14, 0);
+    expect(gaps.bottom).toBeCloseTo(gaps.top, 0);
+  }
+  await checkTitleSpacing();
+  const pin = header.getByRole("button", { name: "固定标题栏" });
+  await expect(pin).toHaveAttribute("aria-pressed", "false");
+  await expect(header).toHaveCSS(
+    "border-bottom",
+    "1px solid rgb(229, 231, 235)",
+  );
+  const views = meta.locator("div").filter({ hasText: "浏览量" }).locator("dd");
+  const nav = page.getByRole("navigation", { name: "章节目录" });
+  await expect(meta).toContainText("root");
+  await expect(views).toHaveText("1");
+  await expect(nav).toHaveCount(0);
+  const created = await meta.locator("time").getAttribute("datetime");
+  await page.getByRole("button", { name: "编辑页面", exact: true }).click();
+  const editor = page.locator(".tiptap");
+  await editor.click();
+  const titles = [
+    "总览",
+    "设计",
+    "重复标题",
+    "实现细节与边界条件的完整说明",
+    "验证方法",
+    "重复标题",
+  ];
+  for (const [index, title] of titles.entries()) {
+    await page.keyboard.type("#".repeat(index + 1) + " ");
+    await page.keyboard.insertText(title);
+    await expect(
+      editor.getByRole("heading", {
+        level: index + 1,
+        name: title,
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.keyboard.press("Enter");
+    await page.keyboard.insertText(
+      "正文段落。".repeat(index === 2 || index === 3 ? 800 : 1),
+    );
+    await page.keyboard.press("Enter");
+  }
+  const marks = nav.getByRole("button");
+  await expect(marks).toHaveCount(6);
+  const lines = await marks
+    .locator("span")
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
+  for (const [index, line] of lines.entries()) {
+    expect(line.right).toBeCloseTo(lines[0].right);
+    if (index) {
+      expect(line.width).toBeLessThan(lines[index - 1].width);
+      expect(line.top - lines[index - 1].top).toBeCloseTo(20);
+    }
+  }
+  await page.getByRole("button", { name: /预\s*览/, exact: true }).click();
+  const h2 = editor.getByRole("heading", {
+    level: 2,
+    name: titles[1],
+    exact: true,
+  });
+  await expect(h2).toHaveText(titles[1]);
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByText("已保存", { exact: true })).toBeVisible();
+  await expect(views).toHaveText("1");
+  await expect(meta.locator("time")).not.toHaveAttribute("datetime", created!);
+  await page.reload();
+  await expect(views).toHaveText("2");
+  await expect(marks).toHaveCount(6);
+  const visibleMarks = nav.locator("button[data-visible]");
+  const atTop = async (index: number) => {
+    const top = await nav.evaluate((el) =>
+      parseFloat(getComputedStyle(el).top),
+    );
+    const heading = editor.getByRole("heading", { level: index + 1 });
+    await expect
+      .poll(() => heading.evaluate((el) => el.getBoundingClientRect().top))
+      .toBeCloseTo(top, 0);
+  };
+  await marks.first().click();
+  await atTop(0);
+  await expect(visibleMarks).toHaveCount(3);
+  for (let i = 0; i < 3; i++) {
+    await expect(marks.nth(i).locator("span")).toHaveCSS(
+      "background-color",
+      "rgb(36, 104, 237)",
+    );
+  }
+  const headerBottom = await page
+    .locator(".topbar")
+    .evaluate((el) => el.getBoundingClientRect().bottom);
+  await editor.getByRole("heading", { level: 1 }).evaluate((el, top) => {
+    window.scrollBy(0, el.getBoundingClientRect().bottom - top - 2);
+  }, headerBottom);
+  await expect(visibleMarks).toHaveCount(3);
+  await page.evaluate(() => window.scrollBy(0, 4));
+  await expect(visibleMarks).toHaveCount(2);
+  await expect(marks.first()).not.toHaveAttribute("data-visible", "true");
+  // A viewport halfway through a long paragraph contains no heading.
+  await page.evaluate(() => window.scrollBy(0, innerHeight));
+  await expect(visibleMarks).toHaveCount(0);
+  const mark = nav.getByRole("button", { name: `4 级标题：${titles[3]}` });
+  const line = mark.locator("span");
+  const bounds = () =>
+    line.evaluate((el) => el.getBoundingClientRect().toJSON());
+  const resting = await bounds();
+  await expect(line).toHaveCSS("transition-duration", "0.15s");
+  await mark.hover();
+  await expect(page.getByRole("tooltip")).toHaveText(titles[3]);
+  await expect
+    .poll(async () => (await bounds()).width)
+    .toBeCloseTo(resting.width * 1.15, 1);
+  expect((await bounds()).right).toBeCloseTo(resting.right);
+  await expect(line).toHaveCSS("background-color", "rgb(168, 181, 199)");
+  const firstFrame = await mark.evaluate(async (button) => {
+    const rail = button.closest("nav")!;
+    const before = rail.getBoundingClientRect();
+    (button as HTMLButtonElement).click();
+    await new Promise(requestAnimationFrame);
+    const after = rail.getBoundingClientRect();
+    return {
+      highlighted: button.hasAttribute("data-visible"),
+      tooltip: [...document.querySelectorAll('[role="tooltip"]')].some(
+        (el) =>
+          el.getClientRects().length > 0 &&
+          getComputedStyle(el).visibility !== "hidden",
+      ),
+      shifted:
+        Math.abs(after.right - before.right) > 1 ||
+        Math.abs(after.top - before.top) > 1,
+    };
+  });
+  expect(firstFrame).toEqual({
+    highlighted: true,
+    tooltip: false,
+    shifted: false,
+  });
+  await atTop(3);
+  await expect(mark).toHaveAttribute("data-visible", "true");
+  await page.mouse.move(0, 0);
+  await expect
+    .poll(async () => (await bounds()).width)
+    .toBeCloseTo(resting.width, 1);
+  // The last heading has only one short paragraph after it.
+  await marks.last().click();
+  await atTop(5);
+  await expect(visibleMarks).toHaveCount(1);
+  await pin.click();
+  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await marks.first().click();
+  await atTop(0);
+  await expect
+    .poll(() => header.evaluate((el) => el.getBoundingClientRect().top))
+    .toBeCloseTo(headerBottom, 0);
+  const pinnedBottom = await header.evaluate(
+    (el) => el.getBoundingClientRect().bottom,
+  );
+  const firstHeading = editor.getByRole("heading", { level: 1 });
+  expect(
+    await firstHeading.evaluate((el) => el.getBoundingClientRect().top),
+  ).toBeGreaterThan(pinnedBottom);
+  await firstHeading.evaluate(
+    (el, top) =>
+      window.scrollBy(0, el.getBoundingClientRect().bottom - top + 1),
+    pinnedBottom,
+  );
+  await expect(marks.first()).not.toHaveAttribute("data-visible", "true");
+  await expect(marks.nth(1)).toHaveAttribute("data-visible", "true");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await marks.nth(4).focus();
+  await page.keyboard.press("Tab");
+  await expect(marks.last()).toBeFocused();
+  await expect(page.getByRole("tooltip")).toHaveText(titles[5]);
+  await marks.last().press("Enter");
+  await atTop(5);
+  await expect(page.getByRole("tooltip")).toBeHidden();
+  const mobileTopbar = await page.locator(".topbar").boundingBox();
+  expect(mobileTopbar!.y).toBeCloseTo(0, 0);
+  await expect
+    .poll(() => header.evaluate((el) => el.getBoundingClientRect().top))
+    .toBeCloseTo(mobileTopbar!.height, 0);
+  const mobileBottom = await header.evaluate(
+    (el) => el.getBoundingClientRect().bottom,
+  );
+  expect(
+    await editor
+      .getByRole("heading", { level: 6 })
+      .evaluate((el) => el.getBoundingClientRect().top),
+  ).toBeGreaterThan(mobileBottom);
+  await expect(marks.last()).toHaveAttribute("data-visible", "true");
+  await page.getByRole("button", { name: "固定顶部栏" }).click();
+  const edgeHeight = await page
+    .getByRole("button", { name: "展开顶部栏" })
+    .evaluate((el) => el.getBoundingClientRect().height);
+  await marks.first().click();
+  await atTop(0);
+  await expect
+    .poll(() => header.evaluate((el) => el.getBoundingClientRect().top))
+    .toBeCloseTo(edgeHeight, 0);
+  await page.reload();
+  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await pin.click();
+  await expect(pin).toHaveAttribute("aria-pressed", "false");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await checkTitleSpacing();
+  await marks.last().click();
+  await atTop(5);
+  expect(
+    await header.evaluate((el) => el.getBoundingClientRect().bottom),
+  ).toBeLessThan(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
 test("Markdown tasks keep their checked state across saves and history restore", async ({
   page,
 }) => {
