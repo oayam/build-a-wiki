@@ -62,7 +62,15 @@ cargo run --locked --manifest-path backend/Cargo.toml --bin bootstrap -- admin <
 
 ### 3. 启动服务
 
-后端终端需先加载根目录的 `.env`：
+完成上述准备后，一条命令即可在两个终端分别启动后端和前端：
+
+```bash
+./scripts/dev-start.sh
+```
+
+在 WSL 中，脚本优先打开一个 Windows Terminal 窗口和两个标签页；在 tmux 中或没有 Windows Terminal 时，使用两个 tmux 窗口。每个服务的日志显示在对应终端，按 `Ctrl+C` 可单独停止。
+
+如需手动启动，后端终端需先加载根目录的 `.env`：
 
 ```bash
 set -a
