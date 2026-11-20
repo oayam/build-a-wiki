@@ -73,6 +73,12 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
     )
     .await;
     let mut create = body("根页面");
+    let original = json!({"type":"doc","content":[{"type":"paragraph","content":[
+        {"type":"text","text":"原稿","marks":[{"type":"bold"}]},
+        {"type":"hardBreak"},
+        {"type":"text","text":"链接","marks":[{"type":"link","attrs":{"href":"https://example.com/old"}}]}
+    ]},{"type":"paragraph"}]});
+    create["body"] = original.clone();
     create["request_id"] = json!(Uuid::new_v4());
     let (code, p, _) = request(&app, "POST", &tree, create.clone(), &ec, et, O).await;
     assert_eq!(code, 200, "{p}");
@@ -178,6 +184,16 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
         .unwrap();
     assert_eq!(count, 2);
     let (_, current, _) = request(&app, "GET", &path, json!({}), &ec, et, O).await;
+    assert_eq!(current["body_text"], "中文内容");
+    let revision_path = format!("{save}/{}", p["revision_id"].as_str().unwrap());
+    let (code, old, _) = request(&app, "GET", &revision_path, json!({}), &ec, et, O).await;
+    assert_eq!(code, 200);
+    assert_eq!(old["body"], original);
+    assert_eq!(old["body_text"], "原稿\n链接\n");
+    let search_path = "/api/v1/search?fields=body&q=%E5%8E%9F%E7%A8%BF";
+    let (code, results, _) = request(&app, "GET", search_path, json!({}), &ec, et, O).await;
+    assert_eq!(code, 200);
+    assert_eq!(results["items"], json!([]));
     let restore = json!({"request_id":Uuid::new_v4(),"base_revision_id":current["current_revision_id"],"revision_id":p["revision_id"]});
     let (code, restored, _) = request(
         &app,
@@ -225,6 +241,11 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
     assert_eq!(history["items"].as_array().unwrap().len(), 3);
     let (_, restored_page, _) = request(&app, "GET", &path, json!({}), &ec, et, O).await;
     assert_eq!(restored_page["title"], "根页面");
+    assert_eq!(restored_page["body"], original);
+    assert_eq!(restored_page["body_text"], old["body_text"]);
+    let (_, results, _) = request(&app, "GET", search_path, json!({}), &ec, et, O).await;
+    assert_eq!(results["items"][0]["id"], pid);
+    assert_eq!(results["items"][0]["snippet"], old["body_text"]);
     assert_eq!(
         request(&app, "PUT", &format!("{path}/visit"), json!({}), &ec, et, O)
             .await
