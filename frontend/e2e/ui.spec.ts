@@ -445,21 +445,41 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
   ).toBeVisible();
   const panel = page.getByRole("region", { name: "页面内容", exact: true });
   const emptyHint = panel.getByText("空空如也", { exact: true });
+  const preview = panel.getByRole("button", { name: /预\s*览/, exact: true });
+  const edit = panel.getByRole("button", { name: "编辑页面", exact: true });
+  const save = panel.getByRole("button", { name: "保存", exact: true });
+  const resumeEditing = panel.getByRole("button", {
+    name: "继续编辑",
+    exact: true,
+  });
   await expect(panel).toHaveCSS("border-top-style", "solid");
   await expect(emptyHint).toBeVisible();
-  await expect(emptyHint).toHaveCSS("font-style", "italic");
   await expect(
     panel.getByRole("button", { name: "页面设置", exact: true }),
   ).toBeVisible();
-  await panel.getByRole("button", { name: "编辑页面", exact: true }).click();
-  await expect(panel.getByLabel("页面标题", { exact: true })).toBeVisible();
-  await expect(emptyHint).toBeVisible();
-  await panel.locator(".tiptap").fill("正文内容");
+  await edit.click();
   await expect(emptyHint).toHaveCount(0);
-  await panel.locator(".tiptap").fill("");
+  await save.click();
+  await expect(page.getByText("已保存", { exact: true })).toBeVisible();
   await expect(emptyHint).toBeVisible();
-  await panel.getByRole("button", { name: /预\s*览/, exact: true }).click();
+  await page.reload();
   await expect(emptyHint).toBeVisible();
+  await edit.click();
+  await expect(panel.getByLabel("页面标题", { exact: true })).toBeVisible();
+  await expect(emptyHint).toHaveCount(0);
+  await panel.locator(".tiptap").fill("正文内容");
+  await preview.click();
+  await expect(panel.getByRole("region", { name: "文档预览" })).toContainText(
+    "正文内容",
+  );
+  await expect(emptyHint).toHaveCount(0);
+  await resumeEditing.click();
+  await panel.locator(".tiptap").fill(" \u3000");
+  await panel.locator(".tiptap").press("Enter");
+  await expect(emptyHint).toHaveCount(0);
+  await preview.click();
+  await expect(emptyHint).toBeVisible();
+  await expect(emptyHint).toHaveCSS("font-style", "italic");
   await expect(panel.locator(".document-canvas")).toHaveCSS(
     "outline-style",
     "none",
@@ -469,12 +489,15 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
     fullPage: true,
     animations: "disabled",
   });
-  await panel
-    .getByRole("button", { name: "保存", exact: true })
-    .click();
+  await resumeEditing.click();
+  await expect(emptyHint).toHaveCount(0);
+  await preview.click();
+  await save.click();
+  await expect(edit).toBeVisible();
   await expect(emptyHint).toBeVisible();
   const saved = await (
     await page.request.get(`/api/v1/pages/${page.url().split("/").pop()}`)
   ).json();
+  expect(saved.body_text.trim()).toBe("");
   expect(JSON.stringify(saved.body)).not.toContain("空空如也");
 });

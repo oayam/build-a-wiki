@@ -733,7 +733,7 @@ function Document({
           </Collapse>
           <div className="document-body">
             <EditorContent editor={editor} />
-            {!hasVisibleBody(body) && (
+            {(!editing || preview) && !hasVisibleBody(body) && (
               <span className="document-empty-hint">
                 {EMPTY_DOCUMENT_MESSAGE}
               </span>
