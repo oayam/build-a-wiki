@@ -44,13 +44,66 @@ svg {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  grid-template-rows: var(--topbar-height) 1fr;
+  grid-template-rows: auto 1fr;
 }
-.topbar {
+.topbar-dock {
+  --topbar-edge-height: 8px;
   grid-column: 1 / -1;
   position: sticky;
+  align-self: start;
   top: 0;
   z-index: 30;
+}
+.topbar-dock:not([data-mode="pinned"]) {
+  height: var(--topbar-edge-height);
+  background: var(--topbar-blue-middle);
+}
+.topbar-dock:not([data-mode="pinned"]) .topbar {
+  position: absolute;
+  inset: 0 0 auto;
+  transition: transform 200ms var(--motion-spring);
+}
+.topbar-dock[data-mode="revealed"]::before {
+  /* Keep the hover area continuous while the bar slides under the pointer. */
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--workspace-top);
+}
+.topbar-dock[data-mode="hidden"] .topbar {
+  transform: translateY(calc(-100% - 6px));
+  pointer-events: none;
+}
+.topbar-edge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: #edf2fa;
+  cursor: pointer;
+}
+.topbar-edge::after {
+  content: "";
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: #8299ba;
+}
+.topbar-edge:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+@media (pointer: coarse) {
+  .topbar-dock {
+    --topbar-edge-height: 24px;
+  }
+}
+.topbar {
+  min-height: var(--topbar-height);
   display: flex;
   align-items: center;
   gap: 32px;
@@ -120,9 +173,22 @@ kbd {
   border-radius: 4px;
 }
 .topbar-account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
   padding-left: 22px;
   border-left: 1px solid #ffffff35;
+}
+.topbar .topbar-pin.ant-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: #fff;
+}
+.topbar .topbar-pin.ant-btn:is(:hover, [aria-pressed="true"]) {
+  color: #fff;
+  background: #ffffff20;
 }
 .account {
   font-size: 14px;
@@ -154,9 +220,9 @@ kbd {
 }
 .sidebar {
   position: sticky;
-  top: var(--topbar-height);
+  top: var(--workspace-top);
   align-self: start;
-  height: calc(100vh - var(--topbar-height));
+  height: calc(100vh - var(--workspace-top));
   background: linear-gradient(120deg, #f5f8ff, #f0f5fc);
   border-right: 1px solid var(--border);
   display: flex;
@@ -793,7 +859,6 @@ summary:focus-visible {
     grid-template-rows: auto auto 1fr;
   }
   .topbar {
-    position: relative;
     padding: 11px 16px;
     flex-wrap: wrap;
     gap: 10px;

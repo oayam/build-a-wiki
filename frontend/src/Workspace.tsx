@@ -6,12 +6,12 @@ import {
 } from "./treeNavigation";
 import { useSidebarResize } from "./useSidebarResize";
 import { captureDialogTrigger } from "./useDialogFocusReturn";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Input, Spin } from "antd";
-import type { InputRef } from "antd";
+import { Alert, Button, Spin } from "antd";
 import type { components } from "./api.generated";
-import { Account, request, useSession } from "./session";
+import { request, useSession } from "./session";
+import WorkspaceTopbar, { WorkspaceTopInset } from "./WorkspaceTopbar";
 import { PageTree } from "./Pages";
 import Icon, { type IconName } from "./Icon";
 import { CreatedNodeContext, TreeRow, type CreatedNode } from "./Motion";
@@ -26,7 +26,6 @@ type K = components["schemas"]["KnowledgeBase"];
 export default function Workspace({ children }: { children: React.ReactNode }) {
   const { user } = useSession();
   const location = useLocation();
-  const navigate = useNavigate();
   const client = useQueryClient();
   const [createdNode, setCreatedNode] = React.useState<CreatedNode>();
   React.useEffect(() => {
@@ -48,13 +47,12 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   const sidebarResize = useSidebarResize(collapsed);
   const [createLibrary, setCreateLibrary] = React.useState(false);
   const [createTarget, setCreateTarget] = React.useState<CreatePageTarget>();
-  const [query, setQuery] = React.useState("");
+  const [topInset, setTopInset] = React.useState(0);
   const [more, setMore] = React.useState<K[]>([]);
   const [next, setNext] = React.useState<string | null>();
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [error, setError] = React.useState("");
   const [open, setOpen] = React.useState<string[]>([]);
-  const search = React.useRef<InputRef>(null);
   const pageId = location.pathname.match(/^\/pages\/([^/]+)/)?.[1];
   const libraryId = location.pathname.match(/^\/knowledge-bases\/([^/]+)/)?.[1];
   const libraries = useQuery({
@@ -99,17 +97,9 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
     const changed = () => {
       void client.invalidateQueries({ queryKey: ["navigation"] });
     };
-    const shortcut = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        search.current?.focus();
-      }
-    };
     window.addEventListener("wiki-navigation-changed", changed);
-    window.addEventListener("keydown", shortcut);
     return () => {
       window.removeEventListener("wiki-navigation-changed", changed);
-      window.removeEventListener("keydown", shortcut);
     };
   }, [client]);
   React.useEffect(() => {
@@ -143,42 +133,15 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
     <CreatedNodeContext.Provider value={createdNode}>
       <div
         className={`shell ${collapsed ? "sidebar-collapsed" : ""} ${sidebarResize.resizing ? "sidebar-resizing" : ""}`}
-        style={sidebarResize.style}
+        style={
+          {
+            ...sidebarResize.style,
+            "--workspace-top": `${topInset}px`,
+          } as React.CSSProperties
+        }
         onClickCapture={captureDialogTrigger}
       >
-        <header className="topbar">
-          <Link
-            className="brand"
-            to={HOME_ROUTE}
-            aria-label="Build-a-Wiki 首页"
-          >
-            <span className="brand-mark">
-              <Icon name="book" />
-            </span>
-            <span>Build-a-Wiki</span>
-          </Link>
-          <form
-            className="global-search"
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault();
-              navigate(`/search?q=${encodeURIComponent(query.trim())}`);
-            }}
-          >
-            <Input
-              ref={search}
-              aria-label="全局搜索"
-              placeholder="搜索 wiki 内容（如：使用指南、功能、部署…）"
-              prefix={<Icon name="search" />}
-              suffix={<kbd>Ctrl K</kbd>}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </form>
-          <div className="topbar-account">
-            <Account />
-          </div>
-        </header>
+        <WorkspaceTopbar key={user.id} onInsetChange={setTopInset} />
         <aside className="sidebar" aria-label="知识库导航">
           <div className="sidebar-heading">
             <Link
@@ -369,7 +332,9 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
           </nav>
           <main id="main-content">
             <OpenCreatePageDialog.Provider value={setCreateTarget}>
-              {children}
+              <WorkspaceTopInset.Provider value={topInset}>
+                {children}
+              </WorkspaceTopInset.Provider>
             </OpenCreatePageDialog.Provider>
           </main>
         </div>
