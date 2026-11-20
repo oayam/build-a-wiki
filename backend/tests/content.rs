@@ -20,7 +20,7 @@ async fn physical_acl_constraints_and_revision_ownership() {
     let r = Uuid::new_v4();
     let mut tx = pool.begin().await.unwrap();
     sqlx::query("INSERT INTO pages(id,knowledge_base_id,title,created_by,current_revision_id) VALUES($1,$2,'页',$3,$4)").bind(p).bind(k).bind(owner).bind(r).execute(&mut *tx).await.unwrap();
-    sqlx::query("INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,body_text,editor_id) VALUES($1,$2,1,'页',1,'{}','',$3)").bind(r).bind(p).bind(owner).execute(&mut *tx).await.unwrap();
+    sqlx::query("INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,editor_id) VALUES($1,$2,1,'页',1,'{}',$3)").bind(r).bind(p).bind(owner).execute(&mut *tx).await.unwrap();
     tx.commit().await.unwrap();
     assert!(
         sqlx::query("UPDATE page_revisions SET title='改变' WHERE id=$1")

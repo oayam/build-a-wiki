@@ -11,7 +11,7 @@ try:
  ids={k:str(uuid.uuid4()) for k in ['kb','page','revision','attachment','request']};data='备份恢复一致性附件'.encode();(pathlib.Path(env['ATTACHMENT_DIR'])/ids['attachment']).write_bytes(data)
  query(source,f"""BEGIN; INSERT INTO knowledge_bases(id,name,owner_id) SELECT '{ids['kb']}','恢复验证',id FROM users;
  INSERT INTO pages(id,knowledge_base_id,title,created_by,current_revision_id) SELECT '{ids['page']}','{ids['kb']}','恢复页面',id,'{ids['revision']}' FROM users;
- INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,body_text,editor_id) SELECT '{ids['revision']}','{ids['page']}',1,'恢复页面',1,'{{"type":"doc","content":[{{"type":"paragraph"}}]}}','',id FROM users;
+ INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,editor_id) SELECT '{ids['revision']}','{ids['page']}',1,'恢复页面',1,'{{"type":"doc","content":[{{"type":"paragraph"}}]}}',id FROM users;
  INSERT INTO attachments(id,page_id,uploader_id,upload_id,storage_key,original_name,mime_type,size,checksum,status) SELECT '{ids['attachment']}','{ids['page']}',id,'{ids['request']}','{ids['attachment']}','资料.txt','application/octet-stream',{len(data)},'{hashlib.sha256(data).hexdigest()}','ready' FROM users; COMMIT;""")
  start=time.monotonic();subprocess.run(['python3',str(root/'scripts/backup.py'),str(workspace/'backup')],env=env,check=True);backup_seconds=time.monotonic()-start
  target_env={**env,'DATABASE_URL':url(target),'ATTACHMENT_DIR':str(workspace/'restored-files')};start=time.monotonic();subprocess.run(['python3',str(root/'scripts/restore.py'),str(workspace/'backup')],env=target_env,check=True);restore_seconds=time.monotonic()-start

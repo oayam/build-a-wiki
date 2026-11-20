@@ -71,7 +71,7 @@ pub async fn read(
     h: HeaderMap,
     Path((p, r)): Path<(Uuid, Uuid)>,
 ) -> Response {
-    response(async{let(mut tx,u)=transaction(&s,&h,false).await?;require(&mut tx,&u,p,true,1).await?;let rev=sqlx::query_as::<_,Revision>("SELECT id,revision_no,title,schema_version,body_json body,body_text,editor_id,restored_from_revision_id FROM page_revisions WHERE page_id=$1 AND id=$2").bind(p).bind(r).fetch_optional(&mut *tx).await?.ok_or_else(missing)?;if u.is_system_admin{audit(&mut tx,Some(u.id),audit_action::REVISIONS_ADMIN_READ,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;}Ok(rev)}.await,&id)
+    response(async{let(mut tx,u)=transaction(&s,&h,false).await?;require(&mut tx,&u,p,true,1).await?;let rev=sqlx::query_as::<_,Revision>("SELECT id,revision_no,title,schema_version,body_json body,revision_text_v1(body_json) body_text,editor_id,restored_from_revision_id FROM page_revisions WHERE page_id=$1 AND id=$2").bind(p).bind(r).fetch_optional(&mut *tx).await?.ok_or_else(missing)?;if u.is_system_admin{audit(&mut tx,Some(u.id),audit_action::REVISIONS_ADMIN_READ,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;}Ok(rev)}.await,&id)
 }
 #[utoipa::path(post,operation_id="restore_revision",path="/api/v1/pages/{id}/restore-revision",request_body=Restore,responses((status=200,body=Saved),(status=409,body=crate::http::ApiError)))]
 pub async fn restore(

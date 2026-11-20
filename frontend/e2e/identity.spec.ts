@@ -110,7 +110,7 @@ test("browser identity → groups → private library → ACL → revoke → ind
   const pid = "00000000-0000-4000-8000-000000000023",
     rid = "00000000-0000-4000-8000-000000000024";
   execFileSync("psql", [process.env.DATABASE_URL!, "-v", "ON_ERROR_STOP=1"], {
-    input: `BEGIN; INSERT INTO pages(id,knowledge_base_id,title,created_by,current_revision_id) VALUES('${pid}','${kid}','fixture',(SELECT id FROM users WHERE username='owner'),'${rid}'); INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,body_text,editor_id) VALUES('${rid}','${pid}',1,'fixture',1,'{}','',(SELECT id FROM users WHERE username='owner')); COMMIT;`,
+    input: `BEGIN; INSERT INTO pages(id,knowledge_base_id,title,created_by,current_revision_id) VALUES('${pid}','${kid}','fixture',(SELECT id FROM users WHERE username='owner'),'${rid}'); INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,editor_id) VALUES('${rid}','${pid}',1,'fixture',1,'{}',(SELECT id FROM users WHERE username='owner')); COMMIT;`,
   });
   await owner.goto(`/pages/${pid}/permissions`);
   await expect(owner.getByRole("heading", { name: "页面权限" })).toBeVisible();

@@ -173,8 +173,8 @@ pub async fn append(
     .fetch_one(&mut **tx)
     .await?;
     let r = Uuid::new_v4();
-    sqlx::query("INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,body_text,editor_id,summary,restored_from_revision_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)").bind(r).bind(p).bind(n).bind(&v.title).bind(v.schema_version).bind(&v.body).bind(text).bind(u.id).bind(summary).bind(restored).execute(&mut **tx).await?;
-    sqlx::query("UPDATE pages SET title=$2,current_revision_id=$3,lock_version=lock_version+1,updated_at=now() WHERE id=$1").bind(p).bind(&v.title).bind(r).execute(&mut **tx).await?;
+    sqlx::query("INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,editor_id,summary,restored_from_revision_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)").bind(r).bind(p).bind(n).bind(&v.title).bind(v.schema_version).bind(&v.body).bind(u.id).bind(summary).bind(restored).execute(&mut **tx).await?;
+    sqlx::query("UPDATE pages SET title=$2,current_revision_id=$3,body_text=$4,lock_version=lock_version+1,updated_at=now() WHERE id=$1").bind(p).bind(&v.title).bind(r).bind(text).execute(&mut **tx).await?;
     Ok(Saved {
         id: p,
         revision_id: r,
@@ -225,7 +225,7 @@ pub async fn read(
 ) -> Response {
     response(async{
  let(mut tx,u)=transaction(&s,&h,false).await?;require(&mut tx,&u,p,true,1).await?;
- let page=sqlx::query_as::<_,Page>("SELECT p.id,p.knowledge_base_id,CASE WHEN page_role($1,p.parent_id)>0 THEN p.parent_id ELSE NULL END parent_id,p.title,p.current_revision_id,r.schema_version,r.body_json body,r.body_text,page_role($1,p.id) role,p.lock_version,r.editor_id FROM pages p JOIN page_revisions r ON r.id=p.current_revision_id WHERE p.id=$2").bind(u.id).bind(p).fetch_one(&mut *tx).await?;
+ let page=sqlx::query_as::<_,Page>("SELECT p.id,p.knowledge_base_id,CASE WHEN page_role($1,p.parent_id)>0 THEN p.parent_id ELSE NULL END parent_id,p.title,p.current_revision_id,r.schema_version,r.body_json body,p.body_text,page_role($1,p.id) role,p.lock_version,r.editor_id FROM pages p JOIN page_revisions r ON r.id=p.current_revision_id WHERE p.id=$2").bind(u.id).bind(p).fetch_one(&mut *tx).await?;
  let breadcrumbs=sqlx::query_as::<_,PageLink>("WITH RECURSIVE a AS(SELECT id,parent_id,title,0 depth FROM pages WHERE id=$1 UNION ALL SELECT p.id,p.parent_id,p.title,a.depth+1 FROM pages p JOIN a ON p.id=a.parent_id WHERE a.depth<64) SELECT id,title FROM a WHERE page_role($2,id)>0 ORDER BY depth DESC").bind(p).bind(u.id).fetch_all(&mut *tx).await?;
  if u.is_system_admin{audit(&mut tx,Some(u.id),audit_action::PAGES_ADMIN_READ,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;}
  Ok(PageDetail{page,breadcrumbs})

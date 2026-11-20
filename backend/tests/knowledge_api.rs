@@ -141,7 +141,7 @@ async fn knowledge_acl_transfer_and_independent_pages() {
     let rid = uuid::Uuid::new_v4();
     let mut tx = pool.begin().await.unwrap();
     sqlx::query("INSERT INTO pages(id,knowledge_base_id,title,created_by,current_revision_id) VALUES($1,$2,'fixture',$3,$4)").bind(pid).bind(uuid::Uuid::parse_str(kid).unwrap()).bind(uuid::Uuid::parse_str(owner).unwrap()).bind(rid).execute(&mut *tx).await.unwrap();
-    sqlx::query("INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,body_text,editor_id) VALUES($1,$2,1,'fixture',1,'{}','',$3)").bind(rid).bind(pid).bind(uuid::Uuid::parse_str(owner).unwrap()).execute(&mut *tx).await.unwrap();
+    sqlx::query("INSERT INTO page_revisions(id,page_id,revision_no,title,schema_version,body_json,editor_id) VALUES($1,$2,1,'fixture',1,'{}',$3)").bind(rid).bind(pid).bind(uuid::Uuid::parse_str(owner).unwrap()).execute(&mut *tx).await.unwrap();
     tx.commit().await.unwrap();
     let page_acl = format!("/api/v1/pages/{pid}/permissions");
     let (_, p, _) = request(&app, "GET", &page_acl, json!({}), ec, et, o).await;
