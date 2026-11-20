@@ -659,12 +659,6 @@ main .ant-alert {
 .tiptap h3 {
   font-size: 20px;
 }
-.tiptap h2::before {
-  content: "#";
-  color: #5e93f5;
-  margin-right: 9px;
-  font-weight: 500;
-}
 .tiptap h4 {
   font-size: 18px;
 }

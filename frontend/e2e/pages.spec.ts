@@ -106,6 +106,9 @@ test("page metadata and a live six-level outline follow the saved document", asy
     exact: true,
   });
   await expect(h2).toHaveText(titles[1]);
+  expect(
+    await h2.evaluate((el) => getComputedStyle(el, "::before").content),
+  ).toBe("none");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByText("已保存", { exact: true })).toBeVisible();
   await expect(views).toHaveText("1");
