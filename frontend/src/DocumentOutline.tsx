@@ -1,6 +1,6 @@
 import React from "react";
-import { Tooltip } from "antd";
 import { type Editor, useEditorState } from "@tiptap/react";
+import OutlineTooltip from "./OutlineTooltip";
 import { WorkspaceTopInset } from "./WorkspaceTopbar";
 
 export default function DocumentOutline({
@@ -29,7 +29,14 @@ export default function DocumentOutline({
   const rail = React.useRef<HTMLElement>(null);
   const [visible, setVisible] = React.useState<Set<number>>(() => new Set());
   const refreshAfterJump = React.useRef<(() => void) | null>(null);
-  const [hint, setHint] = React.useState<number | null>(null);
+  const [hint, setHint] = React.useState<{
+    pos: number;
+    anchor: HTMLButtonElement;
+  } | null>(null);
+  const hintId = React.useId();
+  const hintTitle = hint
+    ? headings.find(({ pos }) => pos === hint.pos)?.title
+    : undefined;
   const coveredTop = React.useContext(WorkspaceTopInset) + pinnedHeight;
 
   React.useLayoutEffect(() => {
@@ -99,52 +106,43 @@ export default function DocumentOutline({
 
   if (!headings.length) return null;
   return (
-    <nav ref={rail} className="document-outline" aria-label="章节目录">
+    <nav
+      ref={rail}
+      className="document-outline"
+      aria-label="章节目录"
+      onPointerLeave={() => setHint(null)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setHint(null);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setHint(null);
+      }}
+    >
       {headings.map(({ pos, level, title }) => (
-        <Tooltip
+        <button
           key={pos}
-          title={title}
-          placement="left"
-          open={hint === pos}
-          trigger={[]}
-          motion={{
-            motionEnter: false,
-            motionAppear: false,
-            motionLeave: false,
+          type="button"
+          aria-label={`${level} 级标题：${title}`}
+          aria-describedby={hint?.pos === pos ? hintId : undefined}
+          data-visible={visible.has(pos) || undefined}
+          aria-description={visible.has(pos) ? "标题在当前视口内" : undefined}
+          onPointerEnter={(event) => {
+            if (event.pointerType !== "touch")
+              setHint({ pos, anchor: event.currentTarget });
           }}
-          destroyOnHidden
-          styles={{
-            root: {
-              pointerEvents: "none",
-              display: hint === pos ? undefined : "none",
-            },
+          onFocus={(event) => {
+            if (event.currentTarget.matches(":focus-visible"))
+              setHint({ pos, anchor: event.currentTarget });
           }}
+          onClick={() => jumpToHeading(pos)}
         >
-          <button
-            type="button"
-            aria-label={`${level} 级标题：${title}`}
-            data-visible={visible.has(pos) || undefined}
-            aria-description={visible.has(pos) ? "标题在当前视口内" : undefined}
-            onPointerMove={(event) => {
-              if (event.pointerType !== "touch") setHint(pos);
-            }}
-            onPointerLeave={() => setHint(null)}
-            onFocus={(event) => {
-              if (event.currentTarget.matches(":focus-visible")) setHint(pos);
-            }}
-            onBlur={() => setHint(null)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") setHint(null);
-            }}
-            onClick={() => jumpToHeading(pos)}
-          >
-            <span
-              aria-hidden="true"
-              style={{ width: `${36 - 4 * (level - 1)}px` }}
-            />
-          </button>
-        </Tooltip>
+          <span
+            aria-hidden="true"
+            style={{ width: `${36 - 4 * (level - 1)}px` }}
+          />
+        </button>
       ))}
+      <OutlineTooltip id={hintId} anchor={hint?.anchor} title={hintTitle} />
     </nav>
   );
 }

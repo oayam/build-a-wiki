@@ -1735,6 +1735,34 @@ summary:focus-visible {
   width: 16px;
   height: 16px;
 }
+.document-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 64px));
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 125ms ease-out,
+    visibility 0s linear 125ms;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8faff;
+  color: #22324f;
+  box-shadow: 0 3px 12px rgb(34 50 79 / 12%);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.document-tooltip[data-open] {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0s;
+}
 .document-layout {
   --outline-gap: 16px;
   --outline-top: calc(

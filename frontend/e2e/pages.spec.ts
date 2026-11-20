@@ -104,7 +104,7 @@ test("page metadata and a live six-level outline follow the saved document", asy
     "总览",
     "设计",
     "重复标题",
-    "实现细节与边界条件的完整说明",
+    "实现细节与边界条件的完整说明：多层章节、长标题的换行和跳转后的可见范围",
     "验证方法",
     "重复标题",
   ];
@@ -195,8 +195,75 @@ test("page metadata and a live six-level outline follow the saved document", asy
     line.evaluate((el) => el.getBoundingClientRect().toJSON());
   const resting = await bounds();
   await expect(line).toHaveCSS("transition-duration", "0.15s");
+  await page.mouse.move(0, 0);
+  await expect(tooltip).toBeHidden();
+  // Sample painted frames through entry and switches between adjacent marks.
+  const samplePreview = await page.evaluateHandle(() => {
+    const frames: number[][] = [];
+    let frame = 0;
+    function sample() {
+      frames.push(
+        Array.from(document.querySelectorAll('[role="tooltip"]'), (el) => {
+          const style = getComputedStyle(el);
+          return style.visibility === "visible" ? Number(style.opacity) : 0;
+        }).filter((opacity) => opacity > 0),
+      );
+      frame = requestAnimationFrame(sample);
+    }
+    sample();
+    return () => {
+      cancelAnimationFrame(frame);
+      return frames;
+    };
+  });
+  const fades = await page.evaluateHandle(() => {
+    const completed: { opacity: string; seconds: number }[] = [];
+    document.addEventListener(
+      "transitionend",
+      (event) => {
+        const el = event.target;
+        if (
+          event.propertyName === "opacity" &&
+          el instanceof Element &&
+          el.matches(".document-tooltip")
+        )
+          completed.push({
+            opacity: getComputedStyle(el).opacity,
+            seconds: event.elapsedTime,
+          });
+      },
+      true,
+    );
+    return completed;
+  });
   await mark.hover();
-  await expect(page.getByRole("tooltip")).toHaveText(titles[3]);
+  await expect(tooltip).toHaveText(titles[3]);
+  await expect(tooltip).toHaveCSS("background-color", "rgb(248, 250, 255)");
+  expect(
+    await tooltip.evaluate(
+      (el) => el.clientHeight > 2 * parseFloat(getComputedStyle(el).lineHeight),
+    ),
+  ).toBe(true);
+  await expect
+    .poll(() => fades.jsonValue())
+    .toContainEqual({ opacity: "1", seconds: 0.125 });
+  for (const index of [4, 5, 4, 3]) {
+    await marks.nth(index).hover();
+    await expect(tooltip).toHaveText(titles[index]);
+  }
+  const frames = await samplePreview.evaluate((stop) => stop());
+  let previous = 0;
+  for (const opacities of frames) {
+    expect(opacities.length).toBeLessThanOrEqual(1);
+    const current = opacities[0] ?? 0;
+    expect(current).toBeGreaterThanOrEqual(previous);
+    previous = current;
+  }
+  expect(previous).toBe(1);
+  await page.mouse.move(0, 0);
+  await expect(tooltip).toBeHidden();
+  await mark.hover();
+  await expect(tooltip).toHaveCSS("opacity", "1");
   await expect
     .poll(async () => (await bounds()).width)
     .toBeCloseTo(resting.width * 1.15, 1);
@@ -205,16 +272,16 @@ test("page metadata and a live six-level outline follow the saved document", asy
   const firstFrame = await mark.evaluate(async (button) => {
     const rail = button.closest("nav")!;
     const before = rail.getBoundingClientRect();
+    const tip = document.querySelector('[role="tooltip"]')!;
+    const tipBefore = tip.getBoundingClientRect();
     (button as HTMLButtonElement).click();
     await new Promise(requestAnimationFrame);
     const after = rail.getBoundingClientRect();
     return {
       highlighted: button.hasAttribute("data-visible"),
-      tooltip: [...document.querySelectorAll('[role="tooltip"]')].some(
-        (el) =>
-          el.getClientRects().length > 0 &&
-          getComputedStyle(el).visibility !== "hidden",
-      ),
+      tooltipShifted:
+        tip.isConnected &&
+        Math.abs(tip.getBoundingClientRect().top - tipBefore.top) > 1,
       shifted:
         Math.abs(after.right - before.right) > 1 ||
         Math.abs(after.top - before.top) > 1,
@@ -222,9 +289,13 @@ test("page metadata and a live six-level outline follow the saved document", asy
   });
   expect(firstFrame).toEqual({
     highlighted: true,
-    tooltip: false,
+    tooltipShifted: false,
     shifted: false,
   });
+  await expect
+    .poll(() => fades.jsonValue())
+    .toContainEqual({ opacity: "0", seconds: 0.125 });
+  await expect(tooltip).toBeHidden();
   await atTop(3);
   await expect(mark).toHaveAttribute("data-visible", "true");
   await page.mouse.move(0, 0);
