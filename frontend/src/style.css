@@ -544,18 +544,6 @@ main .ant-alert {
   padding: 4px 12px;
   color: #22324f;
 }
-.document-badge {
-  flex-shrink: 0;
-  padding: 3px 9px;
-  border-radius: 20px;
-  color: #6b7e9a;
-  font-size: 12px;
-  background: #edf2f9;
-}
-.document-badge.is-draft {
-  background: #e8efff;
-  color: #5975aa;
-}
 .document-actions {
   display: flex;
   justify-content: flex-end;
@@ -1689,28 +1677,63 @@ summary:focus-visible {
   max-height: 50dvh;
   overflow-y: auto;
 }
-.document-meta {
+.document-meta,
+.document-meta > dl {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 18px;
-  margin: 2px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #566781;
+  gap: 4px 10px;
 }
-.document-meta div {
-  display: flex;
-  gap: 6px;
+.document-meta {
+  margin: 2px 0 0;
+  color: #566781;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.document-meta > dl {
+  margin: 0;
   min-width: 0;
 }
+.document-meta > .document-view-meta {
+  flex-wrap: nowrap;
+}
+.document-meta dl > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.document-meta dl > div + div::before,
+.document-view-meta > div:first-child::before {
+  content: "";
+  width: 1px;
+  height: 1em;
+  flex: none;
+  margin-inline-end: 5px;
+  background: #cbd5e1;
+}
 .document-meta dt {
+  display: flex;
   color: #687991;
-  white-space: nowrap;
 }
 .document-meta dd {
   margin: 0;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
+}
+.document-meta .document-badge {
+  flex-shrink: 0;
+  margin-block: 2px;
+  margin-inline-start: 4px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 11px;
+  line-height: 16px;
+  background: #e8efff;
+  color: #5975aa;
+}
+.document-meta svg {
+  width: 16px;
+  height: 16px;
 }
 .document-layout {
   --outline-gap: 16px;

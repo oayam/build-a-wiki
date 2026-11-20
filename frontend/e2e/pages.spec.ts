@@ -54,13 +54,49 @@ test("page metadata and a live six-level outline follow the saved document", asy
     "border-bottom",
     "1px solid rgb(229, 231, 235)",
   );
-  const views = meta.locator("div").filter({ hasText: "浏览量" }).locator("dd");
+  const author = meta
+    .locator("div")
+    .filter({ has: page.getByText("作者", { exact: true }) })
+    .locator("dd");
+  const timestamp = meta.locator("time");
+  const views = meta
+    .locator("div")
+    .filter({ has: page.getByText("浏览量", { exact: true }) })
+    .locator("dd");
+  const tooltip = page.getByRole("tooltip");
   const nav = page.getByRole("navigation", { name: "章节目录" });
-  await expect(meta).toContainText("root");
+  await expect(meta.locator("dt svg")).toHaveCount(3);
+  await expect(meta.getByRole("button")).toHaveCount(0);
+  await expect(header.getByText("当前版本")).toHaveCount(0);
+  await expect(author).toHaveText("root");
   await expect(views).toHaveText("1");
+  await expect(timestamp).toBeVisible();
+  for (const value of [author, timestamp, views]) {
+    await value.hover();
+    await expect(tooltip).toHaveCount(0);
+  }
+  const created = await timestamp.getAttribute("datetime");
   await expect(nav).toHaveCount(0);
-  const created = await meta.locator("time").getAttribute("datetime");
   await page.getByRole("button", { name: "编辑页面", exact: true }).click();
+  const status = meta.locator(".document-badge");
+  await expect(status).toHaveText("草稿");
+  const desktop = page.viewportSize()!;
+  for (const width of [desktop.width, 390]) {
+    await page.setViewportSize({ ...desktop, width });
+    const count = (await views.boundingBox())!;
+    const badge = (await status.boundingBox())!;
+    expect(badge.x).toBeGreaterThan(count.x + count.width);
+    expect(badge.y + badge.height / 2).toBeCloseTo(
+      count.y + count.height / 2,
+      0,
+    );
+    expect(
+      await status.evaluate(
+        (el) => getComputedStyle(el.parentElement!, "::before").width,
+      ),
+    ).toBe("1px");
+  }
+  await page.setViewportSize(desktop);
   const editor = page.locator(".tiptap");
   await expect(editor).toHaveAttribute("contenteditable", "true");
   await editor.click();
@@ -101,6 +137,7 @@ test("page metadata and a live six-level outline follow the saved document", asy
     }
   }
   await page.getByRole("button", { name: /预\s*览/, exact: true }).click();
+  await expect(status).toHaveText("预览");
   const h2 = editor.getByRole("heading", {
     level: 2,
     name: titles[1],
@@ -112,8 +149,11 @@ test("page metadata and a live six-level outline follow the saved document", asy
   ).toBe("none");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByText("已保存", { exact: true })).toBeVisible();
+  await expect(meta.locator("dl > div")).toHaveCount(3);
+  await expect(status).toHaveCount(0);
   await expect(views).toHaveText("1");
-  await expect(meta.locator("time")).not.toHaveAttribute("datetime", created!);
+  await expect(timestamp).toBeVisible();
+  await expect(timestamp).not.toHaveAttribute("datetime", created!);
   await page.reload();
   await expect(views).toHaveText("2");
   await expect(marks).toHaveCount(6);

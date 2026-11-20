@@ -6,7 +6,7 @@ import {
   expandTreeNode,
 } from "./treeNavigation";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import Icon from "./Icon";
+import Icon, { type IconName } from "./Icon";
 import EditorToolbar from "./EditorToolbar";
 import DocumentOutline from "./DocumentOutline";
 import { Collapse, MotionAlert, TreeRow } from "./Motion";
@@ -38,6 +38,27 @@ const editTimeFormat = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+function MetadataItem({
+  icon,
+  label,
+  value,
+  dateTime,
+}: {
+  icon: IconName;
+  label: string;
+  value: string | number;
+  dateTime?: string;
+}) {
+  return (
+    <div>
+      <dt>
+        <Icon name={icon} />
+        <span className="sr-only">{label}</span>
+      </dt>
+      <dd>{dateTime ? <time dateTime={dateTime}>{value}</time> : value}</dd>
+    </div>
+  );
+}
 const VISIBLE_BLOCK_TYPES = new Set([
   "image",
   "horizontalRule",
@@ -578,36 +599,41 @@ function Document({
                   <h1>{title}</h1>
                 )}
               </div>
-              <span className={`document-badge ${editing ? "is-draft" : ""}`}>
-                {editing
-                  ? !lease.active
-                    ? "编辑已暂停"
-                    : preview
-                      ? "预览"
-                      : "草稿"
-                  : "当前版本"}
-              </span>
             </div>
-            <dl className="document-meta">
-              <div>
-                <dt>作者</dt>
-                <dd>{page.author_name ?? "—"}</dd>
-              </div>
-              <div>
-                <dt>最后编辑时间</dt>
-                <dd>
-                  <time dateTime={page.last_edited_at}>
-                    {page.last_edited_at
+            <div className="document-meta" role="group" aria-label="文稿信息">
+              <dl>
+                <MetadataItem
+                  icon="user"
+                  label="作者"
+                  value={page.author_name ?? "—"}
+                />
+                <MetadataItem
+                  icon="clock"
+                  label="最后编辑时间"
+                  dateTime={page.last_edited_at}
+                  value={
+                    page.last_edited_at
                       ? editTimeFormat.format(new Date(page.last_edited_at))
-                      : "—"}
-                  </time>
-                </dd>
-              </div>
-              <div>
-                <dt>浏览量</dt>
-                <dd>{page.view_count ?? "—"}</dd>
-              </div>
-            </dl>
+                      : "—"
+                  }
+                />
+              </dl>
+              <dl className="document-view-meta">
+                <MetadataItem
+                  icon="book"
+                  label="浏览量"
+                  value={page.view_count ?? "—"}
+                />
+                {editing && (
+                  <div>
+                    <dt className="sr-only">编辑状态</dt>
+                    <dd className="document-badge">
+                      {!lease.active ? "编辑已暂停" : preview ? "预览" : "草稿"}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
           </div>
           <Space wrap className="document-actions">
             {page.role >= 2 && !draft.ready && draft.status && (
