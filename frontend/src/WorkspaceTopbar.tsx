@@ -1,12 +1,12 @@
 import React from "react";
 import { flushSync } from "react-dom";
-import { Button, Input, type InputRef } from "antd";
+import { Input, type InputRef } from "antd";
 import { Link, useNavigate } from "react-router-dom";
-import { Account, useSession } from "./session";
+import { Account } from "./session";
 import Icon from "./Icon";
 
 export const WorkspaceTopInset = React.createContext(0);
-type Mode = "pinned" | "hidden" | "revealed";
+type Mode = "expanded" | "hidden" | "revealed";
 
 export default function WorkspaceTopbar({
   breadcrumb,
@@ -15,26 +15,18 @@ export default function WorkspaceTopbar({
   breadcrumb: React.RefObject<HTMLElement | null>;
   onInsetChange: (height: number) => void;
 }) {
-  const { user } = useSession();
   const navigate = useNavigate();
-  const preference = `wiki:auto-hide-topbar:${user.id}`;
-  const [mode, setMode] = React.useState<Mode>(() => {
-    try {
-      return localStorage.getItem(preference) === "1" ? "hidden" : "pinned";
-    } catch {
-      return "pinned";
-    }
-  });
+  const [mode, setMode] = React.useState<Mode>("expanded");
   const [query, setQuery] = React.useState("");
   const dock = React.useRef<HTMLDivElement>(null);
-  const bar = React.useRef<HTMLElement>(null);
+  const panel = React.useRef<HTMLDivElement>(null);
   const edge = React.useRef<HTMLButtonElement>(null);
   const search = React.useRef<InputRef>(null);
   const hoverY = React.useRef<number | null>(null);
   const visible = mode !== "hidden";
 
   React.useLayoutEffect(() => {
-    const element = visible ? bar.current! : dock.current!;
+    const element = visible ? panel.current! : dock.current!;
     const measure = () => onInsetChange(element.offsetHeight);
     measure();
     const observer = new ResizeObserver(measure);
@@ -71,7 +63,7 @@ export default function WorkspaceTopbar({
         stripBottom,
         top + home.getBoundingClientRect().top - box.top,
       );
-      bandTimer = dwell(y >= 0 && y <= top + box.height, bandTimer, 3000);
+      bandTimer = dwell(y >= 0 && y <= top + box.height, bandTimer, 2500);
       aboveTimer = dwell(y >= 0 && y < pathTop, aboveTimer, 1000);
     };
     const clear = () => {
@@ -112,16 +104,16 @@ export default function WorkspaceTopbar({
     };
   }, [mode, breadcrumb]);
 
-  function reveal() {
+  function reveal(nextMode: "expanded" | "revealed") {
     flushSync(() =>
-      setMode((previous) => (previous === "hidden" ? "revealed" : previous)),
+      setMode((previous) => (previous === "hidden" ? nextMode : previous)),
     );
   }
   React.useEffect(() => {
     function shortcut(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        reveal();
+        reveal("revealed");
         search.current?.focus({ preventScroll: true });
       }
     }
@@ -138,23 +130,18 @@ export default function WorkspaceTopbar({
     return () => document.removeEventListener("pointerdown", outside);
   }, [mode]);
 
-  function togglePin(event: React.MouseEvent<HTMLButtonElement>) {
-    const hide = mode === "pinned";
+  function toggleBar(event: React.MouseEvent<HTMLButtonElement>) {
+    if (!visible) {
+      reveal("expanded");
+      if (event.detail === 0) search.current?.focus({ preventScroll: true });
+      return;
+    }
     if (
-      hide &&
       "pointerType" in event.nativeEvent &&
       event.nativeEvent.pointerType === "mouse"
     )
       hoverY.current = event.clientY;
-    flushSync(() => setMode(hide ? "hidden" : "pinned"));
-    if (hide && event.detail === 0)
-      edge.current?.focus({ preventScroll: true });
-    try {
-      if (hide) localStorage.setItem(preference, "1");
-      else localStorage.removeItem(preference);
-    } catch {
-      // The current session still uses the selected mode.
-    }
+    setMode("hidden");
   }
 
   return (
@@ -166,7 +153,9 @@ export default function WorkspaceTopbar({
         if (
           mode === "revealed" &&
           event.pointerType !== "touch" &&
-          !dock.current?.contains(document.activeElement)
+          (!dock.current?.contains(document.activeElement) ||
+            (document.activeElement === edge.current &&
+              !edge.current?.matches(":focus-visible")))
         )
           setMode("hidden");
       }}
@@ -186,65 +175,53 @@ export default function WorkspaceTopbar({
         }
       }}
     >
-      {mode === "hidden" && (
+      <div className="topbar-panel" ref={panel}>
+        <header
+          id="workspace-topbar"
+          className="topbar"
+          inert={!visible}
+          aria-hidden={!visible}
+        >
+          <Link className="brand" to="/" aria-label="Build-a-Wiki 首页">
+            <span className="brand-mark">
+              <Icon name="book" />
+            </span>
+            <span>Build-a-Wiki</span>
+          </Link>
+          <form
+            className="global-search"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+            }}
+          >
+            <Input
+              ref={search}
+              aria-label="全局搜索"
+              placeholder="搜索 wiki 内容（如：使用指南、功能、部署…）"
+              prefix={<Icon name="search" />}
+              suffix={<kbd>Ctrl K</kbd>}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </form>
+          <div className="topbar-account">
+            <Account />
+          </div>
+        </header>
         <button
           className="topbar-edge"
           type="button"
           ref={edge}
-          aria-label="展开顶部栏"
+          aria-label={visible ? "收起顶部栏" : "展开顶部栏"}
           aria-controls="workspace-topbar"
-          aria-expanded={false}
-          onClick={(event) => {
-            reveal();
-            if (event.detail === 0)
-              search.current?.focus({ preventScroll: true });
-          }}
-        />
-      )}
-      <header
-        ref={bar}
-        id="workspace-topbar"
-        className="topbar"
-        inert={!visible}
-        aria-hidden={!visible}
-      >
-        <Link className="brand" to="/" aria-label="Build-a-Wiki 首页">
-          <span className="brand-mark">
-            <Icon name="book" />
-          </span>
-          <span>Build-a-Wiki</span>
-        </Link>
-        <form
-          className="global-search"
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault();
-            navigate(`/search?q=${encodeURIComponent(query.trim())}`);
-          }}
+          aria-expanded={visible}
+          onClick={toggleBar}
         >
-          <Input
-            ref={search}
-            aria-label="全局搜索"
-            placeholder="搜索 wiki 内容（如：使用指南、功能、部署…）"
-            prefix={<Icon name="search" />}
-            suffix={<kbd>Ctrl K</kbd>}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </form>
-        <div className="topbar-account">
-          <Button
-            type="text"
-            className="topbar-pin"
-            aria-label="固定顶部栏"
-            aria-pressed={mode === "pinned"}
-            title={mode === "pinned" ? "取消固定顶部栏" : "固定顶部栏"}
-            icon={<Icon name="pin" />}
-            onClick={togglePin}
-          />
-          <Account />
-        </div>
-      </header>
+          <Icon name="chevron" />
+        </button>
+      </div>
     </div>
   );
 }

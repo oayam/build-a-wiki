@@ -20,18 +20,36 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("topbar pin persists and the hover delay cancels on exit", async ({
+test("topbar starts expanded and its lower arrow enables hover reveal", async ({
   page,
 }) => {
   const dock = page.locator(".topbar-dock");
   const bar = page.locator(".topbar");
-  const pin = page.getByRole("button", { name: "固定顶部栏" });
+  const panel = page.locator(".topbar-panel");
+  const collapse = page.getByRole("button", { name: "收起顶部栏" });
   const edge = page.getByRole("button", { name: "展开顶部栏" });
   const search = page.getByRole("textbox", { name: "全局搜索" });
-  await expect(pin).toHaveAttribute("aria-pressed", "true");
-  await pin.click();
+  await page.evaluate(() =>
+    localStorage.setItem("wiki:auto-hide-topbar:topbar-reader", "1"),
+  );
   await page.reload();
+  await expect(dock).toHaveAttribute("data-mode", "expanded");
+  await expect(search).toBeVisible();
+  await expect(collapse).toHaveAttribute("aria-expanded", "true");
+  await expect(collapse.locator("svg")).toHaveCSS(
+    "transform",
+    "matrix(0, -1, 1, 0, 0, 0)",
+  );
+  const headerBottom = await bar.evaluate(
+    (el) => el.getBoundingClientRect().bottom,
+  );
+  expect(
+    await collapse.evaluate((el) => el.getBoundingClientRect().top),
+  ).toBeCloseTo(headerBottom, 0);
+  await collapse.click();
   await expect(dock).toHaveAttribute("data-mode", "hidden");
+  await expect(edge).toHaveCSS("height", "18px");
+  await expect(edge.locator("svg")).toBeVisible();
   await expect(search).toHaveCount(0);
   await expect
     .poll(() => bar.evaluate((el) => el.getBoundingClientRect().bottom))
@@ -51,8 +69,11 @@ test("topbar pin persists and the hover delay cancels on exit", async ({
   expect(await dock.getAttribute("data-mode")).toBe("hidden");
   await page.clock.runFor(1);
   await expect(dock).toHaveAttribute("data-mode", "revealed");
-  await expect(bar).toHaveCSS("transition-duration", "0.2s");
-  await expect(bar).toHaveCSS("transition-timing-function", /linear\(.*1\.06/);
+  await expect(panel).toHaveCSS("transition-duration", "0.2s");
+  await expect(panel).toHaveCSS(
+    "transition-timing-function",
+    /linear\(.*1\.06/,
+  );
   await page.clock.runFor(200);
   await expect
     .poll(() => bar.evaluate((el) => el.getBoundingClientRect().top))
@@ -67,12 +88,29 @@ test("topbar pin persists and the hover delay cancels on exit", async ({
   await expect(edge).toBeFocused();
   await edge.press("Enter");
   await expect(search).toBeFocused();
+  await expect(dock).toHaveAttribute("data-mode", "expanded");
   await expect(search).toHaveValue("知识库");
-  await pin.click();
-  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await collapse.click();
+  await expect(edge).toHaveAttribute("aria-expanded", "false");
   await page.clock.resume();
   await page.reload();
-  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await expect(collapse).toHaveAttribute("aria-expanded", "true");
+});
+
+test("clicking the expand arrow keeps the topbar open until collapsed", async ({
+  page,
+}) => {
+  const dock = page.locator(".topbar-dock");
+  const collapse = page.getByRole("button", { name: "收起顶部栏" });
+  await collapse.click();
+  await page.getByRole("button", { name: "展开顶部栏" }).click();
+  await page.getByRole("heading", { name: "我的知识库" }).click();
+  await expect(dock).toHaveAttribute("data-mode", "expanded");
+  await expect(
+    page.getByRole("textbox", { name: "全局搜索" }),
+  ).toBeInViewport();
+  await collapse.click();
+  await expect(dock).toHaveAttribute("data-mode", "hidden");
 });
 
 test("breadcrumb and upper hover bands keep independent continuous dwell times", async ({
@@ -80,7 +118,7 @@ test("breadcrumb and upper hover bands keep independent continuous dwell times",
 }) => {
   const dock = page.locator(".topbar-dock");
   const crumb = page.getByRole("navigation", { name: "页面路径" });
-  await page.getByRole("button", { name: "固定顶部栏" }).click();
+  await page.getByRole("button", { name: "收起顶部栏" }).click();
   const row = (await crumb.boundingBox())!;
   const home = (await crumb
     .getByRole("link", { name: "返回工作台" })
@@ -88,7 +126,7 @@ test("breadcrumb and upper hover bands keep independent continuous dwell times",
   const fast = Math.floor(home.y) - 1;
   const slow = Math.ceil(home.y);
   const bottom = Math.floor(row.y + row.height);
-  const outside = () => page.mouse.move(400, bottom + 20);
+  const outside = () => page.mouse.move(400, bottom + 100);
   const mode = () => dock.getAttribute("data-mode");
   await outside();
   await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
@@ -96,7 +134,7 @@ test("breadcrumb and upper hover bands keep independent continuous dwell times",
 
   // Cross the sidebar/content boundary and both vertical bands without leaving the union.
   await page.mouse.move(50, bottom - 1);
-  await page.clock.runFor(1700);
+  await page.clock.runFor(1200);
   await page.mouse.move(home.x, fast);
   await page.clock.runFor(700);
   await page.mouse.move(50, slow);
@@ -109,7 +147,7 @@ test("breadcrumb and upper hover bands keep independent continuous dwell times",
 
   // Going below the row cancels both timers. Re-entering the row cancels only the fast timer.
   await page.mouse.move(50, slow);
-  await page.clock.runFor(2900);
+  await page.clock.runFor(2400);
   await page.mouse.move(50, bottom + 1);
   await page.clock.runFor(200);
   await page.mouse.move(50, fast);
@@ -133,7 +171,7 @@ test("breadcrumb and upper hover bands keep independent continuous dwell times",
     .poll(() => crumb.evaluate((el) => el.getBoundingClientRect().bottom))
     .toBeLessThan(0);
   await page.mouse.move(50, slow);
-  await page.clock.runFor(2999);
+  await page.clock.runFor(2499);
   expect(await mode()).toBe("hidden");
   await page.clock.runFor(1);
   await expect(dock).toHaveAttribute("data-mode", "revealed");
@@ -141,16 +179,18 @@ test("breadcrumb and upper hover bands keep independent continuous dwell times",
 
 test.describe("touch topbar", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
-  test("the top edge opens with a tap and an outside tap dismisses it", async ({
+  test("tapping the expand arrow keeps the topbar open after an outside tap", async ({
     page,
   }) => {
-    const pin = page.getByRole("button", { name: "固定顶部栏" });
+    const collapse = page.getByRole("button", { name: "收起顶部栏" });
     const edge = page.getByRole("button", { name: "展开顶部栏" });
-    await pin.tap();
-    await expect(edge).toHaveCSS("height", "24px");
+    await collapse.tap();
+    await expect(edge).toHaveCSS("height", "28px");
     await edge.tap();
-    await expect(pin).toHaveAttribute("aria-pressed", "false");
+    await expect(collapse).toHaveAttribute("aria-expanded", "true");
     await page.getByRole("heading", { name: "我的知识库" }).tap();
+    await expect(collapse).toBeVisible();
+    await collapse.tap();
     await expect(edge).toBeVisible();
   });
 });

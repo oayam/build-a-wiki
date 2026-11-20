@@ -48,8 +48,11 @@ test("sidebar divider clamps width, preserves it across navigation and supports 
       .locator(".topbar")
       .evaluate((el) => el.getBoundingClientRect().height),
   ).toBe(TOPBAR_HEIGHT);
+  const edgeBottom = await page
+    .getByRole("button", { name: "收起顶部栏" })
+    .evaluate((el) => el.getBoundingClientRect().bottom);
   expect(await sidebar.evaluate((el) => el.getBoundingClientRect().top)).toBe(
-    TOPBAR_HEIGHT,
+    edgeBottom,
   );
   const dragTo = async (target: number) => {
     const rect = (await divider.boundingBox())!;

@@ -47,21 +47,25 @@ svg {
   grid-template-rows: auto 1fr;
 }
 .topbar-dock {
-  --topbar-edge-height: 8px;
+  --topbar-edge-height: 18px;
   grid-column: 1 / -1;
   position: sticky;
   align-self: start;
   top: 0;
   z-index: 30;
 }
-.topbar-dock:not([data-mode="pinned"]) {
+.topbar-dock:not([data-mode="expanded"]) {
   height: var(--topbar-edge-height);
+}
+.topbar-dock[data-mode="revealed"] {
   background: var(--topbar-blue-middle);
 }
-.topbar-dock:not([data-mode="pinned"]) .topbar {
+.topbar-panel {
+  transition: transform 200ms var(--motion-spring);
+}
+.topbar-dock:not([data-mode="expanded"]) .topbar-panel {
   position: absolute;
   inset: 0 0 auto;
-  transition: transform 200ms var(--motion-spring);
 }
 .topbar-dock[data-mode="revealed"]::before {
   /* Keep the hover area continuous while the bar slides under the pointer. */
@@ -70,28 +74,27 @@ svg {
   inset: 0 0 auto;
   height: var(--workspace-top);
 }
-.topbar-dock[data-mode="hidden"] .topbar {
-  transform: translateY(calc(-100% - 6px));
-  pointer-events: none;
+.topbar-dock[data-mode="hidden"] .topbar-panel {
+  transform: translateY(calc(var(--topbar-edge-height) - 100%));
 }
 .topbar-edge {
-  position: absolute;
-  inset: 0;
   width: 100%;
-  height: 100%;
+  height: var(--topbar-edge-height);
   border: 0;
   padding: 0;
   display: grid;
   place-items: center;
   background: #edf2fa;
+  color: #4a6486;
   cursor: pointer;
 }
-.topbar-edge::after {
-  content: "";
-  width: 36px;
-  height: 3px;
-  border-radius: 2px;
-  background: #8299ba;
+.topbar-edge svg {
+  width: 16px;
+  height: 16px;
+  transform: rotate(90deg);
+}
+.topbar-edge[aria-expanded="true"] svg {
+  transform: rotate(-90deg);
 }
 .topbar-edge:focus-visible {
   outline: 2px solid var(--blue);
@@ -99,7 +102,7 @@ svg {
 }
 @media (pointer: coarse) {
   .topbar-dock {
-    --topbar-edge-height: 24px;
+    --topbar-edge-height: 28px;
   }
 }
 .topbar {
@@ -173,22 +176,9 @@ kbd {
   border-radius: 4px;
 }
 .topbar-account {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   flex-shrink: 0;
   padding-left: 22px;
   border-left: 1px solid #ffffff35;
-}
-.topbar .topbar-pin.ant-btn {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  color: #fff;
-}
-.topbar .topbar-pin.ant-btn:is(:hover, [aria-pressed="true"]) {
-  color: #fff;
-  background: #ffffff20;
 }
 .account {
   font-size: 14px;

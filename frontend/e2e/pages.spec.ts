@@ -137,7 +137,7 @@ test("page metadata and a live six-level outline follow the saved document", asy
     );
   }
   const headerBottom = await page
-    .locator(".topbar")
+    .locator(".topbar-panel")
     .evaluate((el) => el.getBoundingClientRect().bottom);
   await editor.getByRole("heading", { level: 1 }).evaluate((el, top) => {
     window.scrollBy(0, el.getBoundingClientRect().bottom - top - 2);
@@ -224,7 +224,7 @@ test("page metadata and a live six-level outline follow the saved document", asy
   await marks.last().press("Enter");
   await atTop(5);
   await expect(page.getByRole("tooltip")).toBeHidden();
-  const mobileTopbar = await page.locator(".topbar").boundingBox();
+  const mobileTopbar = await page.locator(".topbar-panel").boundingBox();
   expect(mobileTopbar!.y).toBeCloseTo(0, 0);
   await expect
     .poll(() => header.evaluate((el) => el.getBoundingClientRect().top))
@@ -238,7 +238,7 @@ test("page metadata and a live six-level outline follow the saved document", asy
       .evaluate((el) => el.getBoundingClientRect().top),
   ).toBeGreaterThan(mobileBottom);
   await expect(marks.last()).toHaveAttribute("data-visible", "true");
-  await page.getByRole("button", { name: "固定顶部栏" }).click();
+  await page.getByRole("button", { name: "收起顶部栏" }).click();
   const edgeHeight = await page
     .getByRole("button", { name: "展开顶部栏" })
     .evaluate((el) => el.getBoundingClientRect().height);
