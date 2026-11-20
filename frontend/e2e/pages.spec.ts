@@ -417,23 +417,49 @@ test("Markdown tasks keep their checked state across saves and history restore",
   await editor.click();
   await page.keyboard.type("- plain bullet");
   await page.keyboard.press("Enter");
-  await page.keyboard.type("- [ ] first task");
+  await page.keyboard.type("- [ ] ");
+  await page.keyboard.insertText("评估工作量");
   await page.keyboard.press("Enter");
-  await page.keyboard.type("- [x] second task");
-  const first = editor.getByRole("checkbox", { name: "first task" });
-  const second = editor.getByRole("checkbox", { name: "second task" });
+  await page.keyboard.type("- [x] ");
+  const longTask = "核对每个阶段的排期与所需资源。".repeat(12);
+  await page.keyboard.insertText(longTask);
+  const first = editor.getByRole("checkbox", { name: "评估工作量" });
+  const second = editor.getByRole("checkbox", { name: longTask });
+  async function checkAlignment() {
+    const rows = await editor
+      .locator('ul[data-type="taskList"] > li')
+      .evaluateAll((items) =>
+        items.map((item) => {
+          const box = item.querySelector("input")!.getBoundingClientRect();
+          const paragraph = item.querySelector("p")!;
+          const text = paragraph.getBoundingClientRect();
+          const lineHeight = parseFloat(getComputedStyle(paragraph).lineHeight);
+          return {
+            offset: box.top + box.height / 2 - (text.top + lineHeight / 2),
+            lines: Math.round(text.height / lineHeight),
+          };
+        }),
+      );
+    expect(rows).toHaveLength(2);
+    expect(rows[0].lines).toBe(1);
+    expect(rows[1].lines).toBeGreaterThan(1);
+    for (const row of rows) expect(Math.abs(row.offset)).toBeLessThan(0.5);
+  }
   await expect(first).not.toBeChecked();
   await expect(second).toBeChecked();
+  await checkAlignment();
   await expect(editor.locator("ul:not([data-type]) > li")).toHaveText(
     "plain bullet",
   );
   await page.getByRole("button", { name: /预\s*览/, exact: true }).click();
+  await checkAlignment();
   await first.click();
   await expect(first).not.toBeChecked();
   await save.click();
   await expect(edit).toBeVisible();
   await page.reload();
   await expect(second).toBeChecked();
+  await checkAlignment();
   await first.click();
   await expect(first).not.toBeChecked();
   await edit.click();
