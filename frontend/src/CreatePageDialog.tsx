@@ -6,6 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { request } from "./session";
 import type { components } from "./api.generated";
 export type CreatePageTarget = { kb: string; parent?: string; title: string };
+export const OpenCreatePageDialog = React.createContext<
+  ((target: CreatePageTarget) => void) | undefined
+>(undefined);
 export default function CreatePageDialog({
   target,
   onClose,

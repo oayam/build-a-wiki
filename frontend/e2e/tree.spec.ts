@@ -110,10 +110,9 @@ test("directory loading does not flash empty state or transient scrollbars", asy
   await expect.poll(() => !!release).toBe(true);
   const loading = await metrics();
   console.log("directory overflow threshold", { before, loading });
-  await expect(sidebar.getByText("暂无可见页面", { exact: true })).toHaveCount(
-    0,
-    { timeout: 1000 },
-  );
+  await expect(sidebar.getByText("暂无内容", { exact: true })).toHaveCount(0, {
+    timeout: 1000,
+  });
   expect(loading).toEqual(before);
   release!();
   release = undefined;

@@ -18,8 +18,10 @@ test("attachments, literal search, trash restore, audit and offline local resour
   await page.getByLabel("知识库名称", { exact: true }).fill("附件回收验收");
   await page.getByRole("button", { name: "新建私有知识库" }).click();
   await page.getByRole("link", { name: "附件回收验收", exact: true }).click();
-  await page.getByLabel("新页面标题", { exact: true }).fill("附件百分比100%");
   await page.getByRole("button", { name: "创建页面", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "创建页面", exact: true });
+  await dialog.getByLabel("新建页面标题").fill("附件百分比100%");
+  await dialog.getByRole("button", { name: "确认创建" }).click();
   await expect(
     page.getByRole("heading", { name: "附件百分比100%", exact: true }),
   ).toBeVisible();

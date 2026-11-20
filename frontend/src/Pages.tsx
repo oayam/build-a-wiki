@@ -5,18 +5,20 @@ import {
   toggleTreeNode,
   expandTreeNode,
 } from "./treeNavigation";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import Icon from "./Icon";
 import EditorToolbar from "./EditorToolbar";
-import { Collapse, MotionAlert, TreeRow, notifyCreatedNode } from "./Motion";
-import type { CreatePageTarget } from "./CreatePageDialog";
-import { Alert, Button, Input, Form, Space, Spin, Empty, Dropdown } from "antd";
+import { Collapse, MotionAlert, TreeRow } from "./Motion";
+import {
+  OpenCreatePageDialog,
+  type CreatePageTarget,
+} from "./CreatePageDialog";
+import { Alert, Button, Input, Space, Spin, Empty, Dropdown } from "antd";
 import {
   Link,
   NavLink,
   useParams,
   useLocation,
-  useNavigate,
   useBlocker,
 } from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -38,7 +40,6 @@ function hasVisibleBody(node: JSONContent): boolean {
     Boolean(node.content?.some(hasVisibleBody))
   );
 }
-const emptyBody = { type: "doc", content: [{ type: "paragraph" }] };
 export function PageTree({
   kb,
   parent,
@@ -79,8 +80,15 @@ export function PageTree({
   React.useEffect(() => {
     setOpen((old) => [...new Set([...old, ...ancestors])]);
   }, [ancestorKey]);
+  const isEmpty = query.isSuccess && !items.length;
+  const emptyMessage = isEmpty && <p className="tree-empty">暂无内容</p>;
+  if (!navigation && !parent && expanded && emptyMessage) return emptyMessage;
   return (
-    <div className="tree-branch" aria-busy={expanded && query.isPending}>
+    <div
+      className="tree-branch"
+      aria-busy={expanded && query.isPending}
+      data-empty={isEmpty || undefined}
+    >
       {expanded && query.isPending && (
         <span className="sr-only" role="status">
           正在加载目录…
@@ -185,63 +193,48 @@ export function PageTree({
             加载更多页面
           </Button>
         )}
-        {query.isSuccess && !items.length && (
-          <p className="tree-empty">暂无可见页面</p>
-        )}
+        {emptyMessage}
       </Collapse>
     </div>
   );
 }
 export function LibraryPages() {
   const { id } = useParams();
-  const [error, setError] = React.useState("");
-  const [k, setK] = React.useState<components["schemas"]["KnowledgeBase"]>();
-  const navigate = useNavigate();
-  React.useEffect(() => {
-    void request<components["schemas"]["KnowledgeBase"]>(
-      `/knowledge-bases/${id}`,
-    )
-      .then(setK)
-      .catch((e) => setError(e.message));
-  }, [id]);
+  const { user } = useSession();
+  const openCreatePage = React.useContext(OpenCreatePageDialog);
+  const { data: k, error } = useQuery({
+    queryKey: ["navigation", user.id, "library", id],
+    queryFn: () =>
+      request<components["schemas"]["KnowledgeBase"]>(`/knowledge-bases/${id}`),
+    retry: false,
+  });
   return (
-    <>
-      <h1>{k?.name ?? "知识库"}</h1>
-      <Link to={`/knowledge-bases/${id}/permissions`}>管理权限与设置</Link>
-      {error && <Alert type="error" message={error} />}
-      {k && k.role >= 2 && (
-        <Form
-          layout="inline"
-          style={{ margin: "24px 0" }}
-          onFinish={async (v) => {
-            try {
-              const p = await request<components["schemas"]["Saved"]>(
-                `/knowledge-bases/${id}/pages`,
-                "POST",
-                {
-                  request_id: crypto.randomUUID(),
-                  title: v.title,
-                  schema_version: 1,
-                  body: emptyBody,
-                },
-              );
-              notifyCreatedNode(p.id, "page");
-              navigate(`/pages/${p.id}`);
-            } catch (e) {
-              setError((e as Error).message);
-            }
-          }}
+    <section className="library-directory">
+      <header className="library-directory-header">
+        <h1>{k?.name ?? "知识库"}</h1>
+        <Link
+          to={`/knowledge-bases/${id}/permissions`}
+          className="library-settings-link"
+          aria-label="管理权限与设置"
+          title="管理权限与设置"
         >
-          <Form.Item name="title" rules={[{ required: true, max: 200 }]}>
-            <Input aria-label="新页面标题" placeholder="新页面标题" />
-          </Form.Item>
-          <Button htmlType="submit" type="primary">
+          <Icon name="settings" />
+        </Link>
+      </header>
+      {error && <Alert type="error" message={error.message} />}
+      <div className="library-directory-body">
+        {k && !error && k.role >= 2 && openCreatePage && (
+          <Button
+            className="library-create-button"
+            type="primary"
+            onClick={() => openCreatePage({ kb: k.id, title: k.name })}
+          >
             创建页面
           </Button>
-        </Form>
-      )}
-      {k && <PageTree kb={id!} />}
-    </>
+        )}
+        {k && !error && <PageTree key={k.id} kb={k.id} />}
+      </div>
+    </section>
   );
 }
 export function SharedPages() {

@@ -16,7 +16,10 @@ import { PageTree } from "./Pages";
 import Icon, { type IconName } from "./Icon";
 import { CreatedNodeContext, TreeRow, type CreatedNode } from "./Motion";
 import CreateLibraryDialog from "./CreateLibraryDialog";
-import CreatePageDialog, { type CreatePageTarget } from "./CreatePageDialog";
+import CreatePageDialog, {
+  OpenCreatePageDialog,
+  type CreatePageTarget,
+} from "./CreatePageDialog";
 const HOME_ROUTE = "/";
 const HOME_LINK_LABEL = "知识库首页";
 type K = components["schemas"]["KnowledgeBase"];
@@ -364,7 +367,11 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
               <span>{routeTitle}</span>
             )}
           </nav>
-          <main id="main-content">{children}</main>
+          <main id="main-content">
+            <OpenCreatePageDialog.Provider value={setCreateTarget}>
+              {children}
+            </OpenCreatePageDialog.Provider>
+          </main>
         </div>
       </div>
     </CreatedNodeContext.Provider>

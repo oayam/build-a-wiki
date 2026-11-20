@@ -6,6 +6,57 @@ async function login(p: Page) {
   await p.getByRole("button", { name: /登\s*录/ }).click();
   await expect(p.getByRole("heading", { name: "我的知识库" })).toBeVisible();
 }
+for (const width of [1440, 390]) {
+  test(`the empty library stays in place from its first frame at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await login(page);
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(
+      /\/knowledge-bases\/[^/]+\/pages(?:\?.*)?$/,
+      async (route) => {
+        await pending;
+        await route.continue();
+      },
+    );
+    const name = `空库布局测试-${width}`;
+    await page.getByLabel("知识库名称", { exact: true }).fill(name);
+    await page.getByRole("button", { name: "新建私有知识库" }).click();
+    await page.getByRole("link", { name, exact: true }).click();
+    const main = page.getByRole("main");
+    await expect(main.getByRole("status")).toHaveText("正在加载目录…");
+    const create = main.getByRole("button", { name: "创建页面", exact: true });
+    await expect(create).toBeHidden();
+    await expect(main.getByText("暂无内容")).toBeHidden();
+    const positions = main.evaluate(async (container) => {
+      let hint = container.querySelector(".tree-empty");
+      while (!hint) {
+        await new Promise(requestAnimationFrame);
+        hint = container.querySelector(".tree-empty");
+      }
+      const button = container.querySelector(".library-create-button")!;
+      const frames = [];
+      for (let i = 0; i < 24; i++) {
+        frames.push([
+          hint.getBoundingClientRect().top,
+          button.getBoundingClientRect().top,
+        ]);
+        await new Promise(requestAnimationFrame);
+      }
+      return frames;
+    });
+    release();
+    const frames = await positions;
+    expect(new Set(frames.map(([bookY]) => bookY)).size).toBe(1);
+    expect(new Set(frames.map(([, buttonY]) => buttonY)).size).toBe(1);
+    await expect(create).toBeVisible();
+  });
+}
 test("page creation, rich text save and two-browser conflict preserve both versions", async ({
   browser,
   page,
@@ -14,8 +65,19 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   await page.getByLabel("知识库名称", { exact: true }).fill("版本测试库");
   await page.getByRole("button", { name: "新建私有知识库" }).click();
   await page.getByRole("link", { name: "版本测试库", exact: true }).click();
-  await page.getByLabel("新页面标题", { exact: true }).fill("并发页面");
-  await page.getByRole("button", { name: "创建页面", exact: true }).click();
+  const createPage = directory.getByRole("button", {
+    name: "创建页面",
+    exact: true,
+  });
+  const dialog = page.getByRole("dialog", { name: "创建页面", exact: true });
+  await createPage.click();
+  await expect(dialog.getByText("创建位置：版本测试库")).toBeVisible();
+  await dialog.getByLabel("新建页面标题").press("Escape");
+  await expect(createPage).toBeFocused();
+  await expect(directory.getByText("暂无内容", { exact: true })).toBeVisible();
+  await createPage.click();
+  await dialog.getByLabel("新建页面标题").fill("并发页面");
+  await dialog.getByRole("button", { name: "确认创建" }).click();
   await expect(
     page.getByRole("heading", { name: "并发页面", exact: true }),
   ).toBeVisible();

@@ -4,7 +4,8 @@ const POINTER_FOCUS_ATTRIBUTE = "data-pointer-focus-return";
 const FOCUS_VISIBLE_SELECTOR = ":focus-visible";
 const KEYDOWN_EVENT = "keydown";
 const BLUR_EVENT = "blur";
-const TRIGGER_SELECTOR = "button.tree-create, button.directory-create";
+const TRIGGER_SELECTOR =
+  "button.tree-create, button.directory-create, button.library-create-button";
 const INPUT_SOURCE_ATTRIBUTE = "data-dialog-input-source";
 const INPUT_SOURCE = { KEYBOARD: "keyboard", POINTER: "pointer" } as const;
 const KEYBOARD_CLICK_DETAIL = 0;
