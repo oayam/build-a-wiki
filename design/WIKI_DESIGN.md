@@ -141,8 +141,8 @@ HTTP 层不直接拼接权限 SQL。业务服务先确定资源和操作者，�
 | group_members | group_id、user_id，组合唯一；首版无嵌套组 |
 | sessions | id、token_hash、user_id、expires_at、last_seen_at |
 | knowledge_bases | id、name、owner_id、acl_version、deleted_at |
-| pages | id、knowledge_base_id、parent_id、title、position、current_revision_id、acl_mode、lock_version、deleted_at、deletion_batch_id |
-| page_revisions | id、page_id、revision_no、body_json、body_text、editor_id、summary、restored_from_revision_id、created_at；page_id + revision_no 唯一 |
+| pages | id、knowledge_base_id、parent_id、title、position、current_revision_id、body_text、acl_mode、lock_version、deleted_at、deletion_batch_id |
+| page_revisions | id、page_id、revision_no、body_json、editor_id、summary、restored_from_revision_id、created_at；page_id + revision_no 唯一 |
 | page_drafts | page_id、user_id、base_revision_id、body_json、updated_at；page_id + user_id 唯一 |
 | permission_entries | resource_type、resource_id、subject_type、subject_id、role；资源与授权对象组合唯一 |
 | attachments | id、page_id、storage_key 唯一、original_name、mime_type、size、checksum、uploader_id、status |

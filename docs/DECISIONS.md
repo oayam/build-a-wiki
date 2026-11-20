@@ -59,7 +59,7 @@ knowledge_base_acl(knowledge_base_id,user_id?,group_id?,role)、page_acl(page_id
 
 pages 唯一(id,knowledge_base_id)，组合外键(parent_id,knowledge_base_id)引用同库页面，CHECK parent_id<>id；环和深度在持锁事务内检查。pages 含 created_by、title、acl_mode(inherit/independent)、acl_version、lock_version、deleted_at、deletion_batch_id。
 
-page_revisions 包含 title、schema_version、body_json、服务端生成 body_text、editor_id、summary、restored_from_revision_id；唯一(page_id,revision_no)和(page_id,id)。先建 pages（current_revision_id 可暂为空），再建 revisions，再 ALTER pages 添加 (id,current_revision_id) → revisions(page_id,id) 的 DEFERRABLE INITIALLY DEFERRED 外键；事务插入页面→初版→设置当前版本。提交时使用延迟约束触发器确保页面有当前版本。应用角色不得 UPDATE/DELETE revisions，保留期清理由独立受控角色完成。
+pages.body_text 缓存当前版纯文本，与当前版本指针在同一事务更新。历史正文保存独立的 JSONB 快照，查看时按 v1 正文规则生成纯文本。page_revisions 包含 title、schema_version、body_json、editor_id、summary、restored_from_revision_id；唯一(page_id,revision_no)和(page_id,id)。先建 pages（current_revision_id 可暂为空），再建 revisions，再 ALTER pages 添加 (id,current_revision_id) → revisions(page_id,id) 的 DEFERRABLE INITIALLY DEFERRED 外键；事务插入页面→初版→设置当前版本。提交时使用延迟约束触发器确保页面有当前版本。应用角色不得 UPDATE/DELETE revisions，保留期清理由独立受控角色完成。
 
 page_drafts 主键(page_id,user_id)，含 title/schema_version/body_json/base_revision_id/draft_version；base_revision 组合外键确保归属页面。PUT 使用 draft_version 比较并递增防乱序。recent_visits 主键(user_id,page_id)，含 visited_at，按时间和 page_id 排序。
 
