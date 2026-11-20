@@ -12,6 +12,7 @@ pub mod admin;
 pub mod auth;
 pub mod body;
 pub mod drafts;
+pub mod edit_leases;
 pub mod history;
 pub mod http;
 pub mod identity;

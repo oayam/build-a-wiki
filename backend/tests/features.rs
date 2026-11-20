@@ -192,7 +192,22 @@ async fn attachments_are_streamed_idempotent_compensated_and_reauthorized() {
         .0,
         200
     );
-    assert_eq!(request(&app,"POST",&format!("/api/v1/pages/{pid}/revisions"),json!({"request_id":Uuid::new_v4(),"base_revision_id":p["revision_id"],"title":"附件测试","schema_version":1,"body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"第二位成员的贡献"}]}]}}),&rc,rt,O).await.0,200);
+    let lease = Uuid::new_v4();
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            &format!("/api/v1/pages/{pid}/edit-lease"),
+            json!({"lease_id":lease}),
+            &rc,
+            rt,
+            O
+        )
+        .await
+        .0,
+        200
+    );
+    assert_eq!(request(&app,"POST",&format!("/api/v1/pages/{pid}/revisions"),json!({"lease_id":lease,"request_id":Uuid::new_v4(),"base_revision_id":p["revision_id"],"title":"附件测试","schema_version":1,"body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"第二位成员的贡献"}]}]}}),&rc,rt,O).await.0,200);
     request(
         &app,
         "PUT",

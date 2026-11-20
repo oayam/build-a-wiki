@@ -223,7 +223,7 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
       )
       .toBe(true);
     await expect(
-      page.getByRole("button", { name: "保存共享版本" }),
+      page.getByRole("button", { name: "保存", exact: true }),
     ).toBeVisible();
     await page.screenshot({
       path: path.join(output, `${width === 390 ? "mobile" : "tablet"}.png`),
@@ -268,17 +268,17 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
     page.getByRole("button", { name: "粗体", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.type("UI format verification");
-  await page.getByRole("button", { name: "保存共享版本" }).click();
-  await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
-  await expect(page.getByText("共享版本已保存", { exact: true })).toHaveCount(
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByText("已保存", { exact: true })).toBeVisible();
+  await expect(page.getByText("已保存", { exact: true })).toHaveCount(
     0,
     { timeout: 6500 },
   );
   await page.getByRole("button", { name: "编辑页面", exact: true }).click();
-  await page.getByRole("button", { name: "保存共享版本", exact: true }).click();
-  await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByText("已保存", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "关闭保存提示", exact: true }).click();
-  await expect(page.getByText("共享版本已保存", { exact: true })).toHaveCount(
+  await expect(page.getByText("已保存", { exact: true })).toHaveCount(
     0,
   );
   await page.reload();
@@ -470,7 +470,7 @@ test("design workspace: tree, formatting, global search, responsive layout", asy
     animations: "disabled",
   });
   await panel
-    .getByRole("button", { name: "保存共享版本", exact: true })
+    .getByRole("button", { name: "保存", exact: true })
     .click();
   await expect(emptyHint).toBeVisible();
   const saved = await (

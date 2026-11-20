@@ -49,9 +49,7 @@ export default function History() {
         revision_id: selected.id,
       });
       await load();
-      setMessage(
-        "已恢复为新的共享版本；个人草稿仍保留，打开编辑页时可选择恢复或丢弃。",
-      );
+      setMessage("已恢复为新版本。已有个人草稿会保留，可在编辑时恢复或丢弃。");
       setSelected(undefined);
     } catch (e) {
       setError((e as Error).message);
@@ -126,7 +124,7 @@ export default function History() {
               <pre>{selected.body_text}</pre>
             </div>
             <div>
-              <h3>当前共享正文</h3>
+              <h3>当前版本正文</h3>
               <pre>{current?.body_text}</pre>
             </div>
           </div>

@@ -372,6 +372,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/pages/{id}/edit-lease": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations["acquire"];
+    post?: never;
+    delete: operations["release"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/pages/{id}/move": {
     parameters: {
       query?: never;
@@ -704,11 +720,19 @@ export interface components {
       base_revision_id: string;
       /** Format: int64 */
       draft_version: number;
+      /** Format: uuid */
+      lease_id: string;
     };
     DraftState: {
       draft?: null | components["schemas"]["Draft"];
       /** Format: int64 */
       draft_version: number;
+    };
+    EditLease: {
+      /** Format: uuid */
+      lease_id: string;
+      /** @description Renew only a still-live lease. A delayed heartbeat cannot reacquire a page. */
+      renew?: boolean;
     };
     Entry: {
       /** Format: uuid */
@@ -897,6 +921,8 @@ export interface components {
     SavePage: components["schemas"]["Content"] & {
       /** Format: uuid */
       base_revision_id: string;
+      /** Format: uuid */
+      lease_id: string;
       /** Format: uuid */
       request_id: string;
       summary?: string | null;
@@ -1792,6 +1818,64 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
+  acquire: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EditLease"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/plain": number;
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiError"];
+        };
+      };
+    };
+  };
+  release: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EditLease"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/plain": boolean;
         };
       };
     };

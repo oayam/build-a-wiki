@@ -33,6 +33,7 @@ pub struct CreatePage {
 }
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SavePage {
+    pub lease_id: Uuid,
     pub request_id: Uuid,
     pub base_revision_id: Uuid,
     #[serde(flatten)]
@@ -252,6 +253,7 @@ pub async fn save(
             if let Some(r) = replay(&mut tx, u.id, &scope, v.request_id, &hash).await? {
                 return Ok(r);
             }
+            crate::edit_leases::require_owned(&mut tx, p, u.id, v.lease_id).await?;
             if current != v.base_revision_id {
                 return Err(conflict(
                     error_code::REVISION_CONFLICT,
@@ -268,6 +270,7 @@ pub async fn save(
                 None,
             )
             .await?;
+            crate::edit_leases::release_owned(&mut tx, p, u.id, v.lease_id).await?;
             let value = serde_json::to_value(saved).unwrap();
             remember(&mut tx, u.id, &scope, v.request_id, &hash, &value).await?;
             audit(

@@ -57,7 +57,7 @@ for (const width of [1440, 390]) {
     await expect(create).toBeVisible();
   });
 }
-test("page creation, rich text save and two-browser conflict preserve both versions", async ({
+test("page creation, rich text save and exclusive editing survives disconnects", async ({
   browser,
   page,
 }) => {
@@ -65,6 +65,9 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   await page.getByLabel("知识库名称", { exact: true }).fill("版本测试库");
   await page.getByRole("button", { name: "新建私有知识库" }).click();
   await page.getByRole("link", { name: "版本测试库", exact: true }).click();
+  const directory = page.getByRole("main");
+  await expect(directory.getByText("暂无内容", { exact: true })).toBeVisible();
+  await expect(directory.getByRole("textbox")).toHaveCount(0);
   const createPage = directory.getByRole("button", {
     name: "创建页面",
     exact: true,
@@ -90,17 +93,56 @@ test("page creation, rich text save and two-browser conflict preserve both versi
     second.getByRole("heading", { name: "并发页面", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "编辑页面" }).click();
+  await expect(page.locator(".tiptap")).toHaveAttribute(
+    "contenteditable",
+    "true",
+  );
   await second.getByRole("button", { name: "编辑页面" }).click();
-  await page.locator(".tiptap").fill("甲的中文内容");
-  await second.locator(".tiptap").fill("乙的独立内容");
-  await page.getByRole("button", { name: "保存共享版本" }).click();
-  await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
-  await second.getByRole("button", { name: "保存共享版本" }).click();
-  await expect(second.getByText(/页面已被其他成员更新/)).toBeVisible();
-  await expect(second.locator(".tiptap")).toContainText("乙的独立内容");
-  await second.getByRole("button", { name: "查看最新版本" }).click();
-  await expect(second.locator("pre")).toContainText("甲的中文内容");
-  await expect(second.getByLabel("本地内容副本")).toHaveValue(/乙的独立内容/);
+  await expect(second.getByText(/此文稿正在其他编辑窗口/)).toBeVisible();
+  await expect(second.locator(".tiptap")).toHaveAttribute(
+    "contenteditable",
+    "false",
+  );
+  await page.locator('.tiptap[contenteditable="true"]').fill("甲的中文内容");
+  await page.context().setOffline(true);
+  await expect(page.locator(".tiptap")).toHaveAttribute(
+    "contenteditable",
+    "false",
+  );
+  await expect(
+    page.getByRole("button", { name: "保存", exact: true }),
+  ).toBeDisabled();
+  await page.context().setOffline(false);
+  await page.getByRole("button", { name: "重新获取编辑权" }).click();
+  await expect(page.locator(".tiptap")).toHaveAttribute(
+    "contenteditable",
+    "true",
+  );
+  await expect(page.locator(".tiptap")).toContainText("甲的中文内容");
+  // Commit the first request on the server but drop its response.
+  await page.route(
+    "**/revisions",
+    async (route) => {
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      await route.abort("failed");
+    },
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await page.getByRole("button", { name: "重试上次保存" }).click();
+  await expect(page.getByText("已保存", { exact: true })).toBeVisible();
+  await second.getByRole("button", { name: "编辑页面" }).click();
+  await expect(second.locator(".tiptap")).toHaveAttribute(
+    "contenteditable",
+    "true",
+  );
+  await expect(second.locator(".tiptap")).toContainText("甲的中文内容");
+  await second.getByRole("button", { name: "放弃编辑" }).click();
+  await expect(second.locator(".tiptap")).toHaveAttribute(
+    "contenteditable",
+    "false",
+  );
   await c.close();
   page.on("dialog", (d) => d.accept());
   await page.reload();
@@ -115,18 +157,18 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   if (await page.getByRole("button", { name: "放弃个人草稿" }).isVisible())
     await page.getByRole("button", { name: "放弃个人草稿" }).click();
   await page.getByRole("button", { name: "编辑页面" }).click();
-  await page.locator(".tiptap").fill("刷新后恢复的草稿");
-  await expect(
-    page.getByText("个人草稿已同步（尚未共享）", { exact: true }),
-  ).toBeVisible();
+  await page
+    .locator('.tiptap[contenteditable="true"]')
+    .fill("刷新后恢复的草稿");
+  await expect(page.getByText("个人草稿已同步", { exact: true })).toBeVisible();
   await page.reload();
   await expect(
-    page.getByText("发现未共享的个人草稿", { exact: true }),
+    page.getByText("发现可恢复的个人草稿", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "恢复个人草稿" }).click();
   await expect(page.locator(".tiptap")).toContainText("刷新后恢复的草稿");
-  await page.getByRole("button", { name: "保存共享版本" }).click();
-  await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByText("已保存", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "页面设置", exact: true }).click();
   await page.getByRole("link", { name: "版本历史", exact: true }).click();
   await page.getByRole("button", { name: "查看版本2", exact: true }).click();
@@ -135,7 +177,7 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   ).toBeVisible();
   await page.getByRole("button", { name: "恢复此版本", exact: true }).click();
   await page.getByRole("button", { name: /确\s*定/ }).click();
-  await expect(page.getByText(/已恢复为新的共享版本/)).toBeVisible();
+  await expect(page.getByText(/已恢复为新版本/)).toBeVisible();
   await page.getByRole("link", { name: "返回页面", exact: true }).click();
   await expect(page.locator(".tiptap")).toContainText("甲的中文内容");
   await page.getByRole("button", { name: "页面设置", exact: true }).click();
@@ -146,15 +188,15 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   await page.getByRole("button", { name: "确认移动", exact: true }).click();
   await page.getByRole("button", { name: /确\s*定/ }).click();
   await expect(page).toHaveURL(url);
-  await page.getByRole("link", { name: "Build-a-Wiki 首页", exact: true }).click();
+  await page
+    .getByRole("link", { name: "Build-a-Wiki 首页", exact: true })
+    .click();
   await expect(page.getByRole("heading", { name: "最近访问" })).toBeVisible();
   await page.getByRole("link", { name: "并发页面", exact: true }).click();
   await expect(page).toHaveURL(url);
   await page.getByRole("button", { name: "编辑页面", exact: true }).click();
-  await page.locator(".tiptap").fill("明确放弃的草稿");
-  await expect(
-    page.getByText("个人草稿已同步（尚未共享）", { exact: true }),
-  ).toBeVisible();
+  await page.locator('.tiptap[contenteditable="true"]').fill("明确放弃的草稿");
+  await expect(page.getByText("个人草稿已同步", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "放弃编辑", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "编辑页面", exact: true }),
@@ -165,6 +207,6 @@ test("page creation, rich text save and two-browser conflict preserve both versi
   ).toBeEnabled();
   await expect(page.locator(".tiptap")).toContainText("甲的中文内容");
   await expect(
-    page.getByText("发现未共享的个人草稿", { exact: true }),
+    page.getByText("发现可恢复的个人草稿", { exact: true }),
   ).toHaveCount(0);
 });

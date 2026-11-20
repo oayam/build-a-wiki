@@ -39,7 +39,8 @@ try:
   ready.wait(timeout=60)
   for n in range(int(os.environ.get("BENCH_ITERATIONS","3"))):
    page,ms=call('/pages/'+pid);samples['read'].append(ms)
-   _,ms=call('/pages/'+pid+'/revisions','POST',{'request_id':str(uuid.uuid4()),'base_revision_id':page['current_revision_id'],'title':page['title'],'schema_version':1,'body':page['body']});samples['save'].append(ms)
+   lease=str(uuid.uuid4());call('/pages/'+pid+'/edit-lease','PUT',{'lease_id':lease})
+   _,ms=call('/pages/'+pid+'/revisions','POST',{'lease_id':lease,'request_id':str(uuid.uuid4()),'base_revision_id':page['current_revision_id'],'title':page['title'],'schema_version':1,'body':page['body']});samples['save'].append(ms)
    _,ms=call('/search?q='+urllib.parse.quote('部署'));samples['search'].append(ms)
   return samples
  r=[];errors=[]

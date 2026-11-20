@@ -82,6 +82,7 @@ pub async fn restore(
     Json(v): Json<Restore>,
 ) -> Response {
     response(async{let(mut tx,u)=transaction(&s,&h,true).await?;let(_,current,_)=lock_page(&mut tx,&u,p,2).await?;let scope=format!("restore:{p}");let hash=fingerprint(&v);if let Some(result)=replay(&mut tx,u.id,&scope,v.request_id,&hash).await?{return Ok(result);}
+ crate::edit_leases::require_idle(&mut tx,p).await?;
  if current!=v.base_revision_id{return Err(conflict(error_code::REVISION_CONFLICT,message::RESTORE_CONFLICT));}
  let source:Option<(String,i32,serde_json::Value)>=sqlx::query_as("SELECT title,schema_version,body_json FROM page_revisions WHERE page_id=$1 AND id=$2").bind(p).bind(v.revision_id).fetch_optional(&mut *tx).await?;let(title,schema_version,body)=source.ok_or_else(missing)?;let value=Content{title,schema_version,body};let text=content(&value)?;let saved=append(&mut tx,&u,p,&value,&text,message::RESTORE_REVISION,Some(v.revision_id)).await?;let result=serde_json::to_value(saved).unwrap();remember(&mut tx,u.id,&scope,v.request_id,&hash,&result).await?;audit(&mut tx,Some(u.id),audit_action::REVISIONS_RESTORE,Some(p),&id.0,serde_json::json!({})).await?;tx.commit().await?;Ok(result)}.await,&id)
 }

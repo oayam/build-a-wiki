@@ -63,7 +63,7 @@ pages.body_text 缓存当前版纯文本，与当前版本指针在同一事务�
 
 page_drafts 主键(page_id,user_id)，含 title/schema_version/body_json/base_revision_id/draft_version；base_revision 组合外键确保归属页面。PUT 使用 draft_version 比较并递增防乱序。recent_visits 主键(user_id,page_id)，含 visited_at，按时间和 page_id 排序。
 
-附件 pending→ready→清理；页面 active→deleted(batch)→active 或永久清理；会话 active→revoked/expired；版本仅追加；草稿保存/显式删除不生成共享版本。恢复批次只包含该批次页面。
+附件 pending→ready→清理；页面 active→deleted(batch)→active 或永久清理；会话 active→revoked/expired；版本仅追加；草稿保存/显式删除不生成页面版本。恢复批次只包含该批次页面。
 
 ## HTTP 通用约定
 
@@ -85,7 +85,9 @@ T10 补充：405 METHOD_NOT_ALLOWED 同样返回标准错误结构；健康检�
 
 创建/保存/恢复接口以JSON中的request_id UUID提供幂等性（当前未使用HTTP Idempotency-Key）；同一操作者、资源、请求ID内容不同返回409。幂等记录与版本在同一事务提交，目前保留至后续清理策略落地。目录采用(position,UUID)排序并以末项UUID查回位置，历史按版本号倒序游标；与早期通用分页草案相比，此阶段使用类型化简单游标，详见OpenAPI。
 
-草稿按(page,user)保存，draft_version乐观锁；删除保留递增版本的墓碑，阻止迟到请求复活旧草稿。客户端2秒防抖、串行发送，并使失效队列任务停止提交。草稿只对本人且仍可编辑时开放；恢复历史不自动覆盖个人草稿。共享保存后的清理若遇其他窗口草稿更新，会明确提示，不静默删除他人的新编辑。
+每篇文稿同一时间只授予一个编辑窗口写入权。进入编辑或恢复个人草稿时，客户端以随机 lease_id 调用 PUT /pages/{id}/edit-lease。租约有效期 90 秒，前台约每 30 秒续期，续期失败时暂停编辑。服务器在页面锁内校验租约持有人、窗口令牌、到期时间和 base_revision_id。保存成功在同一事务释放租约，保存响应丢失时重试同一 request_id 可取回原结果。放弃或离开页面时客户端请求释放，异常关闭由到期时间兜底。恢复历史版本也要求当时无人编辑。
+
+草稿按(page,user)保存，draft_version乐观锁；删除保留递增版本的墓碑，阻止迟到请求复活旧草稿。客户端2秒防抖、串行发送，并使失效队列任务停止提交。草稿只对本人且仍可编辑时开放；恢复历史不自动覆盖个人草稿。页面保存后的草稿清理若遇其他窗口草稿更新，会明确提示，不静默删除他人的新编辑。
 
 移动预览和执行都持有授权屏障、知识库和源页面锁；完整子树须可管理、目标须可编辑，同库、无环、总深度不超过64。预览返回受影响页数及跟随目标授权的页数，独立授权边界保持原状。确认时比较结构/授权状态摘要：包含本库页面及当前授权、组成员、账号状态、库所有者；不含密码与会话。任何相关变动返回MOVE_CONFLICT并重新预览；当前采用保守摘要，其他库授权变化也可能使预览失效。排序(position,UUID)确定，页面UUID、版本和ACL不因移动而改写。
 

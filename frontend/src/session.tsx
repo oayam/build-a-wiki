@@ -5,14 +5,26 @@ import type { components } from "./api.generated";
 type Actor = components["schemas"]["Actor"];
 declare const __LOCAL_TEST_LOGIN__: boolean;
 let csrf = "";
+export class RequestError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 export async function request<T>(
   path: string,
   method = "GET",
   body?: unknown,
+  signal?: AbortSignal,
 ): Promise<T> {
   const response = await fetch("/api/v1" + path, {
     method,
+    signal,
     credentials: "same-origin",
+    keepalive: method === "DELETE" && path.endsWith("/edit-lease"),
     headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -22,12 +34,16 @@ export async function request<T>(
       .catch(() => ({ message: "网络请求失败" }));
     if (response.status === 401)
       window.dispatchEvent(new Event("wiki-session-expired"));
-    throw new Error(error.message ?? "请求失败");
+    throw new RequestError(
+      error.code,
+      response.status,
+      error.message ?? "请求失败",
+    );
   }
   if (
     method !== "GET" &&
     /^\/(knowledge-bases|pages)(\/|$)/.test(path) &&
-    !/\/(draft|visit)/.test(path)
+    !/\/(draft|visit|edit-lease)/.test(path)
   )
     window.dispatchEvent(new Event("wiki-navigation-changed"));
   return response.status === 204 ? (undefined as T) : response.json();

@@ -204,15 +204,15 @@ for (const reduced of [false, true]) {
       "动画切换期间保留的正文",
     );
     await page
-      .getByRole("button", { name: "保存共享版本", exact: true })
+      .getByRole("button", { name: "保存", exact: true })
       .click();
     await expect(
-      page.getByText("共享版本已保存", { exact: true }),
+      page.getByText("已保存", { exact: true }),
     ).toBeVisible();
     await page
       .getByRole("button", { name: "关闭保存提示", exact: true })
       .click();
-    await expect(page.getByText("共享版本已保存", { exact: true })).toHaveCount(
+    await expect(page.getByText("已保存", { exact: true })).toHaveCount(
       0,
     );
     if (reduced) {

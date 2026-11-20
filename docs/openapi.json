@@ -1224,6 +1224,97 @@
         }
       }
     },
+    "/api/v1/pages/{id}/edit-lease": {
+      "put": {
+        "tags": [
+          "crate::edit_leases"
+        ],
+        "operationId": "acquire",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditLease"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "crate::edit_leases"
+        ],
+        "operationId": "release",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditLease"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pages/{id}/move": {
       "post": {
         "tags": [
@@ -2170,6 +2261,7 @@
           {
             "type": "object",
             "required": [
+              "lease_id",
               "draft_version",
               "base_revision_id"
             ],
@@ -2181,6 +2273,10 @@
               "draft_version": {
                 "type": "integer",
                 "format": "int64"
+              },
+              "lease_id": {
+                "type": "string",
+                "format": "uuid"
               }
             }
           }
@@ -2205,6 +2301,22 @@
           "draft_version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "EditLease": {
+        "type": "object",
+        "required": [
+          "lease_id"
+        ],
+        "properties": {
+          "lease_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "renew": {
+            "type": "boolean",
+            "description": "Renew only a still-live lease. A delayed heartbeat cannot reacquire a page."
           }
         }
       },
@@ -2835,11 +2947,16 @@
           {
             "type": "object",
             "required": [
+              "lease_id",
               "request_id",
               "base_revision_id"
             ],
             "properties": {
               "base_revision_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "lease_id": {
                 "type": "string",
                 "format": "uuid"
               },

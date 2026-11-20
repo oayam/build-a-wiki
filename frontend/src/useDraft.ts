@@ -3,6 +3,16 @@ import { request } from "./session";
 import type { components } from "./api.generated";
 type Draft = components["schemas"]["Draft"];
 type State = components["schemas"]["DraftState"];
+function preferredDraft(localKey: string, state: State): Draft | null {
+  try {
+    const value = sessionStorage.getItem(localKey);
+    if (value) return JSON.parse(value) as Draft;
+  } catch {
+    /* Use the server copy when local storage is unavailable. */
+  }
+  return state.draft ?? null;
+}
+
 export function useDraft(
   page: string,
   enabled: boolean,
@@ -10,6 +20,7 @@ export function useDraft(
   dirty: boolean,
   snapshot: Draft,
   localKey: string,
+  leaseId: string | undefined,
 ) {
   const [candidate, setCandidate] = React.useState<Draft | null>(null);
   const [ready, setReady] = React.useState(false);
@@ -25,14 +36,7 @@ export function useDraft(
       .then((r) => {
         if (!active) return;
         version.current = r.draft_version;
-        let local: Draft | null = null;
-        try {
-          const value = sessionStorage.getItem(localKey);
-          if (value) local = JSON.parse(value);
-        } catch {
-          /* Ignore corrupt browser-only backup. */
-        }
-        setCandidate(local ?? r.draft ?? null);
+        setCandidate(preferredDraft(localKey, r));
         setReady(true);
       })
       .catch((e) => {
@@ -57,13 +61,18 @@ export function useDraft(
       queue.current = queue.current
         .then(async () => {
           if (gen !== generation.current) return;
-          const r = await request<State>(`/pages/${page}/draft`, "PUT", {
-            ...JSON.parse(serialized),
-            draft_version: version.current,
-          });
+          const r = await request<State>(
+            `/pages/${page}/draft`,
+            "PUT",
+            {
+              ...JSON.parse(serialized),
+              draft_version: version.current,
+              lease_id: leaseId,
+            },
+            AbortSignal.timeout(30000),
+          );
           version.current = r.draft_version;
-          if (gen === generation.current)
-            setStatus("个人草稿已同步（尚未共享）");
+          if (gen === generation.current) setStatus("个人草稿已同步");
         })
         .catch((e) => {
           setStatus("草稿未同步：" + e.message);
@@ -71,7 +80,17 @@ export function useDraft(
         });
     }, 2000);
     return () => clearTimeout(timer);
-  }, [serialized, page, enabled, ready, editing, dirty, candidate, paused]);
+  }, [
+    serialized,
+    page,
+    enabled,
+    ready,
+    editing,
+    dirty,
+    candidate,
+    paused,
+    leaseId,
+  ]);
   async function discard() {
     setPaused(true);
     generation.current++;
@@ -79,6 +98,8 @@ export function useDraft(
     const r = await request<State>(
       `/pages/${page}/draft?draft_version=${version.current}`,
       "DELETE",
+      undefined,
+      AbortSignal.timeout(15000),
     );
     version.current = r.draft_version;
     setCandidate(null);
@@ -92,21 +113,28 @@ export function useDraft(
     status,
     discard,
     restore: () => {
-      const v = candidate;
       setCandidate(null);
-      return v;
     },
     retry: () => {
       setPaused(false);
       setStatus("等待重试");
     },
-    reload: async () => {
+    reload: async (preferLocal = false) => {
       await queue.current;
-      const r = await request<State>(`/pages/${page}/draft`);
+      const r = await request<State>(
+        `/pages/${page}/draft`,
+        "GET",
+        undefined,
+        AbortSignal.timeout(15000),
+      );
       version.current = r.draft_version;
-      setCandidate(r.draft ?? null);
+      const candidate = preferLocal
+        ? preferredDraft(localKey, r)
+        : (r.draft ?? null);
+      setCandidate(candidate);
       setReady(true);
       setPaused(false);
+      return candidate;
     },
   };
 }

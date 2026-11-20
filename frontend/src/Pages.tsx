@@ -25,7 +25,8 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import type { JSONContent } from "@tiptap/core";
 import type { components } from "./api.generated";
 import { extensions } from "./editor";
-import { request, useSession } from "./session";
+import { request, RequestError, useSession } from "./session";
+import { useEditLease } from "./useEditLease";
 import { useDraft } from "./useDraft";
 type Detail = components["schemas"]["PageDetail"];
 type List = components["schemas"]["PageList"];
@@ -311,6 +312,9 @@ function Document({
     const timer = window.setTimeout(() => setMessage(""), 5000);
     return () => window.clearTimeout(timer);
   }, [message]);
+  const [uncertain, setUncertain] = React.useState(false);
+  const lease = useEditLease(page.id);
+  const writable = editing && lease.active && !busy;
   const [preview, setPreview] = React.useState(false);
   const [latest, setLatest] = React.useState<Detail>();
   const retry = React.useRef<{ fingerprint: string; id: string } | undefined>(
@@ -326,8 +330,10 @@ function Document({
     },
   });
   React.useEffect(() => {
-    editor?.setEditable(editing && !preview, false);
-  }, [editor, editing, preview]);
+    const canType = writable && !preview;
+    editor?.setEditable(canType, false);
+    editor?.view.dom.setAttribute("aria-readonly", String(!canType));
+  }, [editor, writable, preview]);
   useBlocker(
     ({ currentLocation, nextLocation }) =>
       dirty &&
@@ -348,10 +354,11 @@ function Document({
   const draft = useDraft(
     page.id,
     page.role >= 2,
-    editing,
+    writable,
     dirty,
     { title, body, schema_version: 1, base_revision_id: base },
     localKey,
+    lease.token.current,
   );
   React.useEffect(() => {
     if (dirty) {
@@ -365,10 +372,53 @@ function Document({
           }),
         );
       } catch {
-        /* Shared save remains available if browser storage is unavailable. */
+        /* The page can still be saved if browser storage is unavailable. */
       }
     }
-  }, [title, body, dirty, localKey, page.current_revision_id]);
+  }, [title, body, base, dirty, localKey]);
+  async function enter(restore = false) {
+    setBusy(true);
+    setError("");
+    try {
+      if (!(await lease.acquire())) return;
+      const updated = await request<Detail>(
+        `/pages/${page.id}`,
+        "GET",
+        undefined,
+        AbortSignal.timeout(15000),
+      );
+      const candidate =
+        editing && restore ? draft.candidate : await draft.reload(true);
+      if (candidate && !restore) {
+        lease.release();
+        return;
+      }
+      if (candidate) draft.restore();
+      const source = candidate ?? updated;
+      onSaved(updated);
+      setTitle(source.title);
+      setBody(source.body as JSONContent);
+      editor?.commands.setContent(source.body as JSONContent, {
+        emitUpdate: false,
+      });
+      setBase(candidate?.base_revision_id ?? updated.current_revision_id);
+      setDirty(!!candidate);
+      setEditing(true);
+      retry.current = undefined;
+      setUncertain(false);
+      setLatest(undefined);
+      if (
+        candidate &&
+        candidate.base_revision_id !== updated.current_revision_id
+      )
+        setLatest(updated);
+    } catch (e) {
+      lease.release();
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function save() {
     setBusy(true);
     setError("");
@@ -378,31 +428,57 @@ function Document({
       schema_version: 1,
       body,
       base_revision_id: base,
+      lease_id: lease.token.current,
     };
     const fingerprint = JSON.stringify(value);
     if (retry.current?.fingerprint !== fingerprint)
       retry.current = { fingerprint, id: crypto.randomUUID() };
     try {
-      await request(`/pages/${page.id}/revisions`, "POST", {
-        ...value,
-        request_id: retry.current.id,
-      });
+      await request(
+        `/pages/${page.id}/revisions`,
+        "POST",
+        {
+          ...value,
+          request_id: retry.current.id,
+        },
+        AbortSignal.timeout(30000),
+      );
+      const updated = await request<Detail>(
+        `/pages/${page.id}`,
+        "GET",
+        undefined,
+        AbortSignal.timeout(15000),
+      );
+      lease.release();
       setDirty(false);
       sessionStorage.removeItem(localKey);
-      const updated = await request<Detail>(`/pages/${page.id}`);
       onSaved(updated);
+      setTitle(updated.title);
+      setBody(updated.body as JSONContent);
+      editor?.commands.setContent(updated.body as JSONContent, {
+        emitUpdate: false,
+      });
       setBase(updated.current_revision_id);
       try {
         await draft.discard();
       } catch (e) {
-        setError("共享版本已保存，但草稿清理失败：" + (e as Error).message);
+        setError("页面已保存，但草稿清理失败：" + (e as Error).message);
       }
-      setMessage("共享版本已保存");
+      setUncertain(false);
+      setMessage("已保存");
       setEditing(false);
       setPreview(false);
       setLatest(undefined);
     } catch (e) {
-      setError((e as Error).message);
+      if (!(e instanceof RequestError) || e.status >= 500) {
+        setUncertain(true);
+        lease.pause("保存结果尚未确认，本地内容已保留。");
+        setError("保存结果尚未确认，本地内容已保留。");
+      } else {
+        setUncertain(false);
+        if (e.code === "EDIT_LEASE") lease.pause(e.message);
+        setError(e.message);
+      }
     } finally {
       setBusy(false);
     }
@@ -420,6 +496,7 @@ function Document({
                 <Input
                   className="document-title"
                   aria-label="页面标题"
+                  disabled={!writable}
                   value={title}
                   onChange={(e) => {
                     setTitle(e.target.value);
@@ -431,15 +508,24 @@ function Document({
               )}
             </div>
             <span className={`document-badge ${editing ? "is-draft" : ""}`}>
-              {editing ? (preview ? "预览" : "草稿") : "已发布"}
+              {editing ? (!lease.active ? "编辑已暂停" : preview ? "预览" : "草稿") : "当前版本"}
             </span>
           </div>
           <Space wrap className="document-actions">
+            {page.role >= 2 && !draft.ready && draft.status && (
+              <Button
+                onClick={() =>
+                  void draft.reload(true).catch((e) => setError(e.message))
+                }
+              >
+                重新读取草稿
+              </Button>
+            )}
             {page.role >= 2 && !editing && (
               <Button
                 type="primary"
-                disabled={!draft.ready || !!draft.candidate}
-                onClick={() => setEditing(true)}
+                disabled={!draft.ready || !!draft.candidate || busy}
+                onClick={() => void enter()}
               >
                 编辑页面
               </Button>
@@ -448,23 +534,34 @@ function Document({
               <>
                 <Button
                   type="primary"
+                  autoInsertSpace={false}
+                  aria-label="保存"
+                  aria-busy={busy}
                   loading={busy}
+                  disabled={busy || !lease.active || !!latest}
                   onClick={() => void save()}
                 >
-                  保存共享版本
+                  保存
                 </Button>
                 <Button onClick={() => setPreview(!preview)}>
                   {preview ? "继续编辑" : "预览"}
                 </Button>
                 <Button
+                  disabled={busy}
                   onClick={async () => {
                     if (!dirty || confirm("放弃未保存内容和个人草稿？")) {
+                      setBusy(true);
                       try {
-                        await draft.discard();
+                        if (dirty) await draft.discard();
                       } catch (e) {
                         setError((e as Error).message);
                         return;
+                      } finally {
+                        setBusy(false);
                       }
+                      lease.release();
+                      setPreview(false);
+                      setLatest(undefined);
                       setBase(page.current_revision_id);
                       setTitle(page.title);
                       setBody(page.body as JSONContent);
@@ -560,9 +657,9 @@ function Document({
           }
         />
         <MotionAlert
-          visible={!!error}
+          visible={!!(error || lease.notice)}
           type="error"
-          message={error}
+          message={error || lease.notice}
           description="本地内容不会被其他成员的版本覆盖。"
           action={
             <Button
@@ -576,27 +673,44 @@ function Document({
             </Button>
           }
         />
+        {editing && uncertain && !lease.active && (
+          <Button disabled={busy} onClick={() => void save()}>
+            重试上次保存
+          </Button>
+        )}
+        {editing && !lease.active && (
+          <Button
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                if (!(await lease.acquire())) return;
+                const updated = await request<Detail>(
+                  `/pages/${page.id}`,
+                  "GET",
+                  undefined,
+                  AbortSignal.timeout(15000),
+                );
+                if (updated.current_revision_id !== base) setLatest(updated);
+                setError("");
+                draft.retry();
+              } catch (e) {
+                lease.pause((e as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            重新获取编辑权
+          </Button>
+        )}
         <MotionAlert
           visible={!!draft.candidate}
           type="info"
-          message="发现未共享的个人草稿"
+          message="发现可恢复的个人草稿"
           action={
             <Space>
-              <Button
-                onClick={() => {
-                  const v = draft.restore();
-                  if (v) {
-                    setTitle(v.title);
-                    setBody(v.body as JSONContent);
-                    setBase(v.base_revision_id);
-                    editor?.commands.setContent(v.body as JSONContent, {
-                      emitUpdate: false,
-                    });
-                    setEditing(true);
-                    setDirty(true);
-                  }
-                }}
-              >
+              <Button disabled={busy} onClick={() => void enter(true)}>
                 恢复个人草稿
               </Button>
               <Button
@@ -614,7 +728,7 @@ function Document({
           className={`document-canvas ${preview ? "preview" : editing ? "editing" : "reading"}`}
           aria-label={preview ? "文档预览" : "文档正文"}
         >
-          <Collapse open={editing && !preview} className="toolbar-motion">
+          <Collapse open={writable && !preview} className="toolbar-motion">
             <EditorToolbar editor={editor} />
           </Collapse>
           <div className="document-body">
@@ -654,7 +768,7 @@ function Document({
       </p>
       {latest && (
         <section>
-          <h2>最新共享版本：{latest.title}</h2>
+          <h2>最新版本：{latest.title}</h2>
           <pre>{latest.body_text}</pre>
           <h3>你的本地内容（可选择复制）</h3>
           <textarea
@@ -664,9 +778,11 @@ function Document({
             style={{ width: "100%", height: 160 }}
           />
           <Button
+            disabled={!writable}
             onClick={() => {
               onSaved(latest);
               setBase(latest.current_revision_id);
+              draft.retry();
               setLatest(undefined);
               setError("");
               setDirty(true);
@@ -679,7 +795,7 @@ function Document({
       <Attachments
         page={page.id}
         editor={editor}
-        editing={editing}
+        editing={writable}
         canEdit={page.role >= 2}
       />
     </>

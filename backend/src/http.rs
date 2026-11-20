@@ -191,6 +191,7 @@ pub fn router(state: AppState) -> Router {
         .merge(crate::admin::routes())
         .merge(crate::knowledge::routes())
         .merge(crate::pages::routes())
+        .merge(crate::edit_leases::routes())
         .merge(crate::drafts::routes())
         .merge(crate::history::routes())
         .merge(crate::recent::routes())
@@ -209,6 +210,8 @@ pub fn router(state: AppState) -> Router {
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        crate::edit_leases::acquire,
+        crate::edit_leases::release,
         crate::pages::create,
         crate::pages::tree,
         crate::pages::read,

@@ -92,35 +92,118 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
         request(&app, "POST", &tree, create, &ec, et, O).await.0,
         409
     );
-    let mut a = body("版本A");
-    a["request_id"] = json!(Uuid::new_v4());
-    a["base_revision_id"] = p["revision_id"].clone();
-    let mut b = a.clone();
-    b["request_id"] = json!(Uuid::new_v4());
-    b["title"] = json!("版本B");
-    let (x, y) = tokio::join!(
-        request(&app, "POST", &save, a.clone(), &ec, et, O),
-        request(&app, "POST", &save, b.clone(), &c, t, O)
+    let lease_path = format!("{path}/edit-lease");
+    let lease = Uuid::new_v4();
+    let other = Uuid::new_v4();
+    let claim = json!({"lease_id":lease});
+    let rival = json!({"lease_id":other});
+    let (first, second) = tokio::join!(
+        request(&app, "PUT", &lease_path, claim.clone(), &ec, et, O),
+        request(&app, "PUT", &lease_path, rival.clone(), &c, t, O)
     );
-    assert!((x.0 == 200 && y.0 == 409) || (x.0 == 409 && y.0 == 200));
-    let winning = if x.0 == 200 { a } else { b };
-    let (cookie, csrf) = if x.0 == 200 { (&ec, et) } else { (&c, t) };
+    assert!(matches!((first.0, second.0), (200, 409) | (409, 200)));
+    if second.0 == 200 {
+        assert_eq!(
+            request(&app, "DELETE", &lease_path, rival.clone(), &c, t, O)
+                .await
+                .0,
+            200
+        );
+        assert_eq!(
+            request(&app, "PUT", &lease_path, claim.clone(), &ec, et, O)
+                .await
+                .0,
+            200
+        );
+    }
+    // Another account cannot release even a known token.
+    request(&app, "DELETE", &lease_path, claim.clone(), &c, t, O).await;
     assert_eq!(
-        request(&app, "POST", &save, winning, cookie, csrf, O)
+        request(&app, "PUT", &lease_path, rival.clone(), &c, t, O)
+            .await
+            .0,
+        409
+    );
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            &lease_path,
+            json!({"lease_id":lease,"renew":true}),
+            &ec,
+            et,
+            O
+        )
+        .await
+        .0,
+        200
+    );
+    // Simulate an abandoned editor and hand over the page without waiting in real time.
+    sqlx::query("UPDATE page_edit_leases SET expires_at=clock_timestamp()-interval '1 second' WHERE page_id=$1")
+        .bind(Uuid::parse_str(pid).unwrap()).execute(&pool).await.unwrap();
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            &lease_path,
+            json!({"lease_id":lease,"renew":true}),
+            &ec,
+            et,
+            O
+        )
+        .await
+        .0,
+        409
+    );
+    assert_eq!(
+        request(&app, "PUT", &lease_path, rival.clone(), &c, t, O)
             .await
             .0,
         200
     );
+    let mut a = body("版本A");
+    a["lease_id"] = json!(lease);
+    a["request_id"] = json!(Uuid::new_v4());
+    a["base_revision_id"] = p["revision_id"].clone();
+    let mut b = a.clone();
+    b["request_id"] = json!(Uuid::new_v4());
+    b["lease_id"] = json!(other);
+    b["title"] = json!("版本B");
+    let (x, y) = tokio::join!(
+        request(&app, "POST", &save, a, &ec, et, O),
+        request(&app, "POST", &save, b.clone(), &c, t, O)
+    );
+    assert_eq!(x.1["code"], "EDIT_LEASE");
+    assert_eq!(y.0, 200);
+    assert_eq!(request(&app, "POST", &save, b, &c, t, O).await.0, 200);
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM page_revisions WHERE page_id=$1")
         .bind(Uuid::parse_str(pid).unwrap())
         .fetch_one(&pool)
         .await
         .unwrap();
     assert_eq!(count, 2);
+
+    assert_eq!(
+        request(&app, "PUT", &lease_path, claim.clone(), &ec, et, O)
+            .await
+            .0,
+        200
+    );
+    let mut offline = body("过期副本");
+    offline["request_id"] = json!(Uuid::new_v4());
+    offline["base_revision_id"] = p["revision_id"].clone();
+    offline["lease_id"] = json!(lease);
+    let stale_save = request(&app, "POST", &save, offline, &ec, et, O).await;
+    assert_eq!(stale_save.1["code"], "REVISION_CONFLICT");
     let draft_path = format!("{path}/draft");
     let mut draft = body("个人草稿");
-    draft["base_revision_id"] = p["revision_id"].clone();
+    draft["lease_id"] = json!(lease);
+    draft["base_revision_id"] = y.1["revision_id"].clone();
     draft["draft_version"] = json!(0);
+    let mut stale_draft = draft.clone();
+    stale_draft["base_revision_id"] = p["revision_id"].clone();
+    let rejected = request(&app, "PUT", &draft_path, stale_draft, &ec, et, O).await;
+    assert_eq!(rejected.1["code"], "REVISION_CONFLICT");
     assert_eq!(
         request(&app, "PUT", &draft_path, draft.clone(), &ec, et, O)
             .await
@@ -195,6 +278,21 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
     assert_eq!(code, 200);
     assert_eq!(results["items"], json!([]));
     let restore = json!({"request_id":Uuid::new_v4(),"base_revision_id":current["current_revision_id"],"revision_id":p["revision_id"]});
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            &format!("{path}/restore-revision"),
+            restore.clone(),
+            &c,
+            t,
+            O
+        )
+        .await
+        .0,
+        409
+    );
+    request(&app, "DELETE", &lease_path, claim, &ec, et, O).await;
     let (code, restored, _) = request(
         &app,
         "POST",
@@ -409,6 +507,7 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
         .await
         .unwrap();
     let mut pending = body("撤权竞态");
+    pending["lease_id"] = json!(lease);
     pending["request_id"] = json!(Uuid::new_v4());
     pending["base_revision_id"] = restored["revision_id"].clone();
     let save_app = app.clone();
@@ -471,6 +570,7 @@ async fn pages_are_atomic_idempotent_and_permission_filtered() {
         404
     );
     let mut denied = body("unauthorized");
+    denied["lease_id"] = json!(lease);
     denied["request_id"] = json!(Uuid::new_v4());
     denied["base_revision_id"] = restored["revision_id"].clone();
     assert_eq!(

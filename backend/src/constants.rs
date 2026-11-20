@@ -14,6 +14,7 @@ pub mod env {
 }
 
 pub mod error_code {
+    pub const EDIT_LEASE: &str = "EDIT_LEASE";
     pub const ACL_CONFLICT: &str = "ACL_CONFLICT";
     pub const CONFLICT: &str = "CONFLICT";
     pub const DRAFT_CONFLICT: &str = "DRAFT_CONFLICT";
@@ -39,6 +40,8 @@ pub mod error_code {
 }
 
 pub mod message {
+    pub const PAGE_BUSY: &str = "此文稿正在其他编辑窗口中打开，请稍后重试";
+    pub const LEASE_LOST: &str = "编辑权已失效，请重新获取编辑权";
     pub const ACL_CONFLICT: &str = "权限已被其他管理员修改，请重新加载";
     pub const APP_BASE_URL_REQUIRED: &str = "APP_BASE_URL required";
     pub const ATTACHMENT_DIR_REQUIRED: &str = "ATTACHMENT_DIR required";

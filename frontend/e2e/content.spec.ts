@@ -40,8 +40,8 @@ test("attachments, literal search, trash restore, audit and offline local resour
   expect(await response.text()).toBe("仅内网可读的附件");
   await page.getByRole("button", { name: "编辑页面", exact: true }).click();
   await page.getByRole("button", { name: "插入正文", exact: true }).click();
-  await page.getByRole("button", { name: "保存共享版本" }).click();
-  await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByText("已保存", { exact: true })).toBeVisible();
   await page
     .getByLabel("选择附件")
     .setInputFiles({
@@ -64,8 +64,8 @@ test("attachments, literal search, trash restore, audit and offline local resour
     })
     .getByRole("button", { name: "插入正文", exact: true })
     .click();
-  await page.getByRole("button", { name: "保存共享版本" }).click();
-  await expect(page.getByText("共享版本已保存", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByText("已保存", { exact: true })).toBeVisible();
   await expect
     .poll(() =>
       page
