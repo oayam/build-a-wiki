@@ -88,6 +88,8 @@ npm run dev
 
 浏览器访问 **http://127.0.0.1:5173**。前端开发服务将 API 请求转发至后端 `8080` 端口。WSL 环境下可通过 Windows 浏览器访问同一地址。
 
+本机测试时可在 `frontend/.env.development.local` 中设置 `WIKI_TEST_ADMIN_PASSWORD` 为开发库 `admin` 账号的密码。打开 `http://127.0.0.1:5173` 即可点击登录；移除该配置并重启前端即可恢复账号密码表单。
+
 后端就绪检查：
 
 ```bash

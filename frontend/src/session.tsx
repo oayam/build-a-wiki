@@ -3,6 +3,7 @@ import Icon from "./Icon";
 import { Alert, Button, Input, Form, Spin, Space } from "antd";
 import type { components } from "./api.generated";
 type Actor = components["schemas"]["Actor"];
+declare const __LOCAL_TEST_LOGIN__: boolean;
 let csrf = "";
 export async function request<T>(
   path: string,
@@ -68,11 +69,15 @@ export function SessionGate({ children }: { children: React.ReactNode }) {
       window.removeEventListener("wiki-session-expired", expired);
     };
   }, []);
-  async function login(v: { username: string; password: string }) {
+  async function login(v?: { username: string; password: string }) {
     setBusy(true);
     setError("");
     try {
-      const u = await request<Actor>("/auth/login", "POST", v);
+      const u = await request<Actor>(
+        __LOCAL_TEST_LOGIN__ ? "/auth/test-login" : "/auth/login",
+        "POST",
+        __LOCAL_TEST_LOGIN__ ? {} : v,
+      );
       csrf = u.csrf_token;
       setUser(u);
     } catch (e) {
@@ -94,19 +99,31 @@ export function SessionGate({ children }: { children: React.ReactNode }) {
           <Icon name="book" /> Build-a-Wiki
         </div>
         <h1>登录团队知识库</h1>
-        <p>使用管理员为你创建的账号。</p>
+        <p>
+          {__LOCAL_TEST_LOGIN__
+            ? "测试版本无需输入密码"
+            : "使用管理员为你创建的账号。"}
+        </p>
         {error && <Alert type="error" message={error} />}
         <Form layout="vertical" onFinish={login}>
-          <Form.Item
-            label="用户名"
-            name="username"
-            rules={[{ required: true }]}
-          >
-            <Input autoComplete="username" />
-          </Form.Item>
-          <Form.Item label="密码" name="password" rules={[{ required: true }]}>
-            <Input.Password autoComplete="current-password" />
-          </Form.Item>
+          {!__LOCAL_TEST_LOGIN__ && (
+            <>
+              <Form.Item
+                label="用户名"
+                name="username"
+                rules={[{ required: true }]}
+              >
+                <Input autoComplete="username" />
+              </Form.Item>
+              <Form.Item
+                label="密码"
+                name="password"
+                rules={[{ required: true }]}
+              >
+                <Input.Password autoComplete="current-password" />
+              </Form.Item>
+            </>
+          )}
           <Button type="primary" htmlType="submit" loading={busy}>
             登录
           </Button>
