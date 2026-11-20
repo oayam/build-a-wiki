@@ -62,6 +62,7 @@ test("page metadata and a live six-level outline follow the saved document", asy
   const created = await meta.locator("time").getAttribute("datetime");
   await page.getByRole("button", { name: "编辑页面", exact: true }).click();
   const editor = page.locator(".tiptap");
+  await expect(editor).toHaveAttribute("contenteditable", "true");
   await editor.click();
   const titles = [
     "总览",
@@ -281,6 +282,7 @@ test("Markdown tasks keep their checked state across saves and history restore",
   const save = page.getByRole("button", { name: "保存", exact: true });
   await edit.click();
   const editor = page.locator(".tiptap");
+  await expect(editor).toHaveAttribute("contenteditable", "true");
   await editor.click();
   await page.keyboard.type("- plain bullet");
   await page.keyboard.press("Enter");
